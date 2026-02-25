@@ -7,6 +7,7 @@ import (
 	"log"
 	"strconv"
 	"time"
+	"vigilate/internal/channeldata"
 
 	"github.com/aymerick/douceur/inliner"
 	mail "github.com/xhit/go-simple-mail/v2"
@@ -14,7 +15,7 @@ import (
 )
 
 // NewWorker creates a worker with id and worker pool reference
-func NewWorker(id int, workerPool chan chan channeldata.MailJob) Worker {
+func NewWorker(id int, workerPool chan chan channeldata.MailData) Worker {
 	return Worker{
 		id:         id,
 		jobQueue:   make(chan channeldata.MailJob),
@@ -25,9 +26,10 @@ func NewWorker(id int, workerPool chan chan channeldata.MailJob) Worker {
 
 // Worker represents a mail processing worker
 type Worker struct {
-	id       int
-	jobQueue chan channeldata.MailJob
-	quitChan chan bool
+	id         int
+	jobQueue   chan channeldata.MailJob
+	workerPool chan chan channeldata.MailJob
+	quitChan   chan bool
 }
 
 // start runs the worker loop
@@ -120,10 +122,10 @@ func (w Worker) processMailQueueJob(mailMessage channeldata.MailData) {
 		From          string
 		FromName      string
 		PreferenceMap map[string]string
-		IntMap        map[string]string
+		IntMap        map[string]int
 		StringMap     map[string]string
-		FloatMap      map[string]string
-		RowSets       map[string]string
+		FloatMap      map[string]float32
+		RowSets       map[string]interface{}
 	}{
 		Content:       mailMessage.Content,
 		FromName:      mailMessage.FromName,
@@ -190,7 +192,7 @@ func (w Worker) processMailQueueJob(mailMessage channeldata.MailData) {
 		SetSubject(mailMessage.Subject)
 
 	//Add addtional recipients
-	if len(mailMessage.AddtionalTo) > 0 {
+	if len(mailMessage.AdditionalTo) > 0 {
 		for _, x := range mailMessage.AdditionalTo {
 			email.AddTo(x)
 		}
@@ -205,7 +207,7 @@ func (w Worker) processMailQueueJob(mailMessage channeldata.MailData) {
 
 	//Add attachments
 	if len(mailMessage.Attachments) > 0 {
-		for _, x := range mailMessage.Attachemnts {
+		for _, x := range mailMessage.Attachments {
 			email.AddAttachment(x)
 		}
 	}

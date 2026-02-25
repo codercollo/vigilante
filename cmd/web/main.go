@@ -9,6 +9,7 @@ import (
 	"time"
 	"vigilate/internal/config"
 	"vigilate/internal/handlers"
+	"vigilate/internal/models"
 
 	"github.com/alexedwards/scs/v2"
 	"github.com/pusher/pusher-http-go"

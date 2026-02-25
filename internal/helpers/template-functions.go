@@ -10,12 +10,12 @@ func addTemplateFunctions() {
 	})
 
 	//Format date using custom layout
-	views.AddGlobal("dateFromLayout", func(t time.Time, 1 string) string {
+	views.AddGlobal("dateFromLayout", func(t time.Time, l string) string {
 		return FormatDateWithLayout(t, 1)
-	}) 
+	})
 
 	//Check if date is after year 1
-	views.AddGlobal("dateAfterYearOne",  func (t time.Time) bool`` {
+	views.AddGlobal("dateAfterYearOne", func(t time.Time) bool {
 		return DateAfterY1(t)
 	})
 
