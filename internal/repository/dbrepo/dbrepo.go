@@ -6,16 +6,14 @@ import (
 	"vigilate/internal/repository"
 )
 
-// Global application configuration reference
 var app *config.AppConfig
 
-// postgresDBRepo implements the DatabaseRepo interface for PostgreSQL
 type postgresDBRepo struct {
-	App *config.AppConfig //Application configuration
-	DB  *sql.DB           //Database connection pool
+	App *config.AppConfig
+	DB  *sql.DB
 }
 
-// NewPostgresRepo creates and returns a new PostgreSQL repository
+// NewPostgresRepo creates the repository
 func NewPostgresRepo(Conn *sql.DB, a *config.AppConfig) repository.DatabaseRepo {
 	app = a
 	return &postgresDBRepo{

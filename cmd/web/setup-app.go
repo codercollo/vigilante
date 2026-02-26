@@ -1,23 +1,26 @@
 package main
 
 import (
-	"database/sql/driver"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"time"
+	"vigilate/internal/channeldata"
+	"vigilate/internal/config"
+	"vigilate/internal/driver"
+	"vigilate/internal/helpers"
+
+	"vigilate/internal/handlers"
 
 	"github.com/alexedwards/scs/postgresstore"
 	"github.com/alexedwards/scs/v2"
 	"github.com/pusher/pusher-http-go"
 )
 
-// setupApp initializes configuration, database, sessions, background workers
-// preferences and websocket client
 func setupApp() (*string, error) {
-
-	//parse CLI flags
+	// read flags
 	insecurePort := flag.String("port", ":4000", "port to listen on")
 	identifier := flag.String("identifier", "vigilate", "unique identifier")
 	domain := flag.String("domain", "localhost", "domain name (e.g. example.com)")
@@ -33,88 +36,88 @@ func setupApp() (*string, error) {
 	pusherApp := flag.String("pusherApp", "9", "pusher app id")
 	pusherKey := flag.String("pusherKey", "", "pusher key")
 	pusherSecret := flag.String("pusherSecret", "", "pusher secret")
-	pusherSecure := flag.Bool("pusherSecure", false, "pusher server uses SSL")
+	pusherSecure := flag.Bool("pusherSecure", false, "pusher server uses SSL (true or false)")
 
 	flag.Parse()
 
-	//validate required flags
 	if *dbUser == "" || *dbHost == "" || *dbPort == "" || *databaseName == "" || *identifier == "" {
-		fmt.Println("Missing required flags")
+		fmt.Println("Missing required flags.")
 		os.Exit(1)
 	}
 
-	log.Println("Connecting to database...")
-
-	//Build DSN string (with or without password)
+	log.Println("Connecting to database....")
 	dsnString := ""
+
+	// when developing locally, we often don't have a db password
 	if *dbPass == "" {
-		dsnString = fmt.Sprintf(
-			"host=%s port=%s user=%s dbname=%s sslmode=%s timezone=UTC connect_timeout=5,"
-			*dbHost, *dbPort, *dbUser, *databaseName, *dbSsl)
+		dsnString = fmt.Sprintf("host=%s port=%s user=%s dbname=%s sslmode=%s timezone=UTC connect_timeout=5",
+			*dbHost,
+			*dbPort,
+			*dbUser,
+			*databaseName,
+			*dbSsl)
 	} else {
-		dsnString = fmt.Sprintf(
-				"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s timezone=UTC connect_timeout=5",
-			*dbHost, *dbPort, *dbUser, *dbPass, *databaseName, *dbSsl)
+		dsnString = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s timezone=UTC connect_timeout=5",
+			*dbHost,
+			*dbPort,
+			*dbUser,
+			*dbPass,
+			*databaseName,
+			*dbSsl)
 	}
 
-	//Connect to PostgreSQL
 	db, err := driver.ConnectPostgres(dsnString)
 	if err != nil {
 		log.Fatal("Cannot connect to database!", err)
 	}
 
-	//Initialize session manager (Stored in Postgres)
-	log.Printf("Initializing session manager...")
+	// session
+	log.Printf("Initializing session manager....")
 	session = scs.New()
 	session.Store = postgresstore.New(db.SQL)
 	session.Lifetime = 24 * time.Hour
 	session.Cookie.Persist = true
 	session.Cookie.Name = fmt.Sprintf("gbsession_id_%s", *identifier)
-	session.Coookie.SameSite = http.SameSiteLaxMode
+	session.Cookie.SameSite = http.SameSiteLaxMode
 	session.Cookie.Secure = *inProduction
 
-	//Initialize mail queue and worker pool
-	log.Println("Initializing mail channel and worker pool...")
+	// start mail channel
+	log.Println("Initializing mail channel and worker pool....")
 	mailQueue := make(chan channeldata.MailJob, maxWorkerPoolSize)
 
-	//Start the email dispatcher
-	log.Println("Starting email dispatcher...")
+	// Start the email dispatcher
+	log.Println("Starting email dispatcher....")
 	dispatcher := NewDispatcher(mailQueue, maxJobMaxWorkers)
 	dispatcher.run()
 
-	//Assemble application config
+	// define application configuration
 	a := config.AppConfig{
-		DB: db,
-		Session: session,
-		InProduction: *inProduction,
-		Domain: *domain,
-		PusherSecret:*pusherSecret,
-		MailQueue:mailQueue,
-		Version: vigilateVersion,
-		Identifier: *identifier,
-
+		DB:           db,
+		Session:      session,
+		InProducion:  *inProduction,
+		Domain:       *domain,
+		PusherSecret: *pusherSecret,
+		MailQueue:    mailQueue,
+		Version:      vigilateVersion,
+		Identifier:   *identifier,
 	}
 
 	app = a
 
-	//Initialize handlers
 	repo = handlers.NewPostgresqlHandlers(db, &app)
 	handlers.NewHandlers(repo, &app)
 
-	//load system preferences from database
-	log.Println("Getting prefrences...")
+	log.Println("Getting preferences...")
 	preferenceMap = make(map[string]string)
-
 	preferences, err := repo.DB.AllPreferences()
 	if err != nil {
 		log.Fatal("Cannot read preferences:", err)
 	}
 
 	for _, pref := range preferences {
-		preferenceMap[prep.Name] = string(pref.Preference)
+		preferenceMap[pref.Name] = string(pref.Preference)
 	}
 
-	//Inject runtime preferences
 	preferenceMap["pusher-host"] = *pusherHost
 	preferenceMap["pusher-port"] = *pusherPort
 	preferenceMap["pusher-key"] = *pusherKey
@@ -123,13 +126,13 @@ func setupApp() (*string, error) {
 
 	app.PreferenceMap = preferenceMap
 
-	//Initialize Pusher websocket client
+	// create pusher client
 	wsClient = pusher.Client{
-		AppId: *pusherApp,
+		AppID:  *pusherApp,
 		Secret: *pusherSecret,
-		Key: *pusherKey,
+		Key:    *pusherKey,
 		Secure: *pusherSecure,
-		Host : fmt.Sprintf("%s:%s", *pusherHost, *pusherPort)
+		Host:   fmt.Sprintf("%s:%s", *pusherHost, *pusherPort),
 	}
 
 	log.Println("Host", fmt.Sprintf("%s:%s", *pusherHost, *pusherPort))
@@ -137,23 +140,20 @@ func setupApp() (*string, error) {
 
 	app.WsClient = wsClient
 
-	//Initialize helper utilities
 	helpers.NewHelpers(&app)
 
 	return insecurePort, err
-
 }
 
-//createDirIfNotExist creates a directory if it does not already exist
+// createDirIfNotExist creates a directory if it does not exist
 func createDirIfNotExist(path string) error {
 	const mode = 0755
-
-	if _, err := os.Stat(path); od.IsNotExist(err) {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
 		err := os.Mkdir(path, mode)
 		if err != nil {
 			log.Println(err)
+			return err
 		}
 	}
-
 	return nil
 }

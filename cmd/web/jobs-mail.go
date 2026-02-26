@@ -15,7 +15,7 @@ import (
 )
 
 // NewWorker creates a worker with id and worker pool reference
-func NewWorker(id int, workerPool chan chan channeldata.MailData) Worker {
+func NewWorker(id int, workerPool chan chan channeldata.MailJob) Worker {
 	return Worker{
 		id:         id,
 		jobQueue:   make(chan channeldata.MailJob),

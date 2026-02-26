@@ -1,33 +1,40 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"runtime/debug"
 	"strconv"
+
 	"vigilate/internal/config"
 	"vigilate/internal/driver"
+	"vigilate/internal/helpers"
+	"vigilate/internal/models"
+	"vigilate/internal/repository"
+	"vigilate/internal/repository/dbrepo"
 
-	"github.com/CloudyKit/jet"
 	"github.com/CloudyKit/jet/v6"
+	"github.com/go-chi/chi"
 )
 
-// Repo holds  global repository reference
+// Repo is the repository
 var Repo *DBRepo
 var app *config.AppConfig
 
-// DBRepo wraps app config and database repo
+// DBRepo is the db repo
 type DBRepo struct {
 	App *config.AppConfig
 	DB  repository.DatabaseRepo
 }
 
-// NewHandlers set global repo and app config
+// NewHandlers creates the handlers
 func NewHandlers(repo *DBRepo, a *config.AppConfig) {
 	Repo = repo
 	app = a
 }
 
-// NewPostgresalHandlers initializes Postgres repo
+// NewPostgresqlHandlers creates db repo for postgres
 func NewPostgresqlHandlers(db *driver.DB, a *config.AppConfig) *DBRepo {
 	return &DBRepo{
 		App: a,
@@ -35,37 +42,40 @@ func NewPostgresqlHandlers(db *driver.DB, a *config.AppConfig) *DBRepo {
 	}
 }
 
-// AdminDashboard renders dashboard page
-func (repo *DBrepo) AdminDashboard(w http.ResponseWriter, r *http.Request) {
+// AdminDashboard displays the dashboard
+func (repo *DBRepo) AdminDashboard(w http.ResponseWriter, r *http.Request) {
 	vars := make(jet.VarMap)
-
-	//Initialize dashboard counters
 	vars.Set("no_healthy", 0)
-	vars.Set("nop_problem", 0)
+	vars.Set("no_problem", 0)
 	vars.Set("no_pending", 0)
-	vars.Set("no_warinings", 0)
+	vars.Set("no_warning", 0)
 
 	err := helpers.RenderPage(w, r, "dashboard", vars, nil)
 	if err != nil {
 		printTemplateError(w, err)
-
 	}
 }
 
-// Settings renders settings page
-func (repo *DBrepo) Settings(e http.ResponseWriter, r *http.Request) {
+// Events displays the events page
+func (repo *DBRepo) Events(w http.ResponseWriter, r *http.Request) {
+	err := helpers.RenderPage(w, r, "events", nil, nil)
+	if err != nil {
+		printTemplateError(w, err)
+	}
+}
+
+// Settings displays the settings page
+func (repo *DBRepo) Settings(w http.ResponseWriter, r *http.Request) {
 	err := helpers.RenderPage(w, r, "settings", nil, nil)
 	if err != nil {
 		printTemplateError(w, err)
 	}
 }
 
-
-//PostSettings updates site preferences
-func(repo *DBrepo) PostSettings(w http.ResponseWriter, http.Request){
+// PostSettings saves site settings
+func (repo *DBRepo) PostSettings(w http.ResponseWriter, r *http.Request) {
 	prefMap := make(map[string]string)
 
-	//Collect form values
 	prefMap["site_url"] = r.Form.Get("site_url")
 	prefMap["notify_name"] = r.Form.Get("notify_name")
 	prefMap["notify_email"] = r.Form.Get("notify_email")
@@ -84,83 +94,85 @@ func(repo *DBrepo) PostSettings(w http.ResponseWriter, http.Request){
 	prefMap["notify_via_email"] = r.Form.Get("notify_via_email")
 	prefMap["sms_notify_number"] = r.Form.Get("sms_notify_number")
 
-
-	//Disasble SMS notifications if SMS disabled
 	if r.Form.Get("sms_enabled") == "0" {
 		prefMap["notify_via_sms"] = "0"
 	}
 
-	//Save preferences to DB
 	err := repo.DB.InsertOrUpdateSitePreferences(prefMap)
 	if err != nil {
 		log.Println(err)
-		ClientError(e, r, http.StatusBadReqwuest)
+		ClientError(w, r, http.StatusBadRequest)
 		return
 	}
 
-	//Update app config in memory
+	// update app config
 	for k, v := range prefMap {
 		app.PreferenceMap[k] = v
-
 	}
 
 	app.Session.Put(r.Context(), "flash", "Changes saved")
 
-	//Redirect based on action 
 	if r.Form.Get("action") == "1" {
 		http.Redirect(w, r, "/admin/overview", http.StatusSeeOther)
-	}else {
+	} else {
 		http.Redirect(w, r, "/admin/settings", http.StatusSeeOther)
 	}
-
 }
 
-//AllHosts renders host page
+// AllHosts displays list of all hosts
 func (repo *DBRepo) AllHosts(w http.ResponseWriter, r *http.Request) {
-	err := helpers.RenderPage(w, r,"hosts", nil, nil)
+	err := helpers.RenderPage(w, r, "hosts", nil, nil)
 	if err != nil {
 		printTemplateError(w, err)
 	}
 }
 
-//AllUsers Lists all users
-func(repo *DBRepo) AllUsers(w http.ResponseWriter, r *http.Request){
+// Host shows the host add/edit form
+func (repo *DBRepo) Host(w http.ResponseWriter, r *http.Request) {
+	err := helpers.RenderPage(w, r, "host", nil, nil)
+	if err != nil {
+		printTemplateError(w, err)
+	}
+}
+
+// AllUsers lists all admin users
+func (repo *DBRepo) AllUsers(w http.ResponseWriter, r *http.Request) {
 	vars := make(jet.VarMap)
 
-	u, err := repo.DB.AllUsers() //Fetch Users
+	u, err := repo.DB.AllUsers()
 	if err != nil {
-		ClientError(w,r, http.StatusBadRequest)
+		ClientError(w, r, http.StatusBadRequest)
 		return
 	}
 
 	vars.Set("users", u)
 
 	err = helpers.RenderPage(w, r, "users", vars, nil)
-	 if err != nil {
+	if err != nil {
 		printTemplateError(w, err)
-	 }
+	}
 }
 
-
-//OneUser renders add/edit user form
-func(repo *DBRepo) OneUser(w http.RepsonseWriter, r *Request) {
-	id, err := strconv.Atoi(w http.ResponseWriter, r *http.Request) {
-		if err != nil {
-			log.Println(err)
-		}
-
-		vars := make(jet.VarMap)
+// OneUser displays the add/edit user page
+func (repo *DBRepo) OneUser(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		log.Println(err)
 	}
 
-	if id > 0{
-		u, user := repo.DB.GetUserById(id)
+	vars := make(jet.VarMap)
+
+	if id > 0 {
+
+		u, err := repo.DB.GetUserById(id)
 		if err != nil {
 			ClientError(w, r, http.StatusBadRequest)
 			return
 		}
+
 		vars.Set("user", u)
-	}else {
-		var u models.Userr
+	} else {
+		var u models.User
 		vars.Set("user", u)
 	}
 
@@ -170,44 +182,42 @@ func(repo *DBRepo) OneUser(w http.RepsonseWriter, r *Request) {
 	}
 }
 
-//PostOneUser insert or updates a user
-func(repo *DBRepo) PostOneUser(w http.ResponseWriter, r *http.Request) {
-	id, err != nl {
+// PostOneUser adds/edits a user
+func (repo *DBRepo) PostOneUser(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
 		log.Println(err)
 	}
 
 	var u models.User
 
 	if id > 0 {
-		//Update existing user
 		u, _ = repo.DB.GetUserById(id)
 		u.FirstName = r.Form.Get("first_name")
 		u.LastName = r.Form.Get("last_name")
 		u.Email = r.Form.Get("email")
 		u.UserActive, _ = strconv.Atoi(r.Form.Get("user_active"))
-
 		err := repo.DB.UpdateUser(u)
 		if err != nil {
 			log.Println(err)
-			ClientError(w, r http.StatusBadRequest)
+			ClientError(w, r, http.StatusBadRequest)
 			return
 		}
 
-		//Update password if provided
 		if len(r.Form.Get("password")) > 0 {
-			err : repo.DB.UpdatePassword(id, r.Form.Get("password"))
+			// changing password
+			err := repo.DB.UpdatePassword(id, r.Form.Get("password"))
 			if err != nil {
 				log.Println(err)
 				ClientError(w, r, http.StatusBadRequest)
 				return
 			}
 		}
-	}  else {
-		//Insert new user
+	} else {
 		u.FirstName = r.Form.Get("first_name")
 		u.LastName = r.Form.Get("last_name")
 		u.Email = r.Form.Get("email")
-		u.UserActive, _ = []byte(r.Form.Get("password"))
+		u.UserActive, _ = strconv.Atoi(r.Form.Get("user_active"))
 		u.Password = []byte(r.Form.Get("password"))
 		u.AccessLevel = 3
 
@@ -220,58 +230,50 @@ func(repo *DBRepo) PostOneUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	repo.App.Session.Put(r.Context(), "flash", "Changes saved")
-	http.Redirect(w, r, "/admin/users", http.StatusSeeOhter)
-
-
+	http.Redirect(w, r, "/admin/users", http.StatusSeeOther)
 }
 
-
-//DeleteUser soft deletes user
-func(repo *DBRepo ) DeleteUser(w  http.ResponseWriter, r *http.Request) {
+// DeleteUser soft deletes a user
+func (repo *DBRepo) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.Atoi(chi.URLParam(r, "id"))
-	_ = repo.DB .DeleteUser(id)
+	_ = repo.DB.DeleteUser(id)
 	repo.App.Session.Put(r.Context(), "flash", "User deleted")
-	http.Rerdirect(w, r "/admin/users", http.StatusSeeOther)
+	http.Redirect(w, r, "/admin/users", http.StatusSeeOther)
 }
 
-
-//ClirntError handles client-side errors
-func ClientError(w http.ResponseWriter, r *http.Request, status int){
-	switch status{
+// ClientError will display error page for client error i.e. bad request
+func ClientError(w http.ResponseWriter, r *http.Request, status int) {
+	switch status {
 	case http.StatusNotFound:
 		show404(w, r)
 	case http.StatusInternalServerError:
 		show500(w, r)
 	default:
-		http.Error(w, http.StatusText(status), status)		
-
+		http.Error(w, http.StatusText(status), status)
 	}
 }
 
-//ServerErrror logs stack trace and shows 500 page
-func ServerError(http.ResponseWriter, r *http.Request, err error){
-   			trace := fmt.Sprintf("%s\n%s", err.Error(), debug.Stack())
-   			_ = log.Output(2, trace)
-   			show500(w, r)
+// ServerError will display error page for internal server error
+func ServerError(w http.ResponseWriter, r *http.Request, err error) {
+	trace := fmt.Sprintf("%s\n%s", err.Error(), debug.Stack())
+	_ = log.Output(2, trace)
+	show500(w, r)
 }
 
-//show404 serves custom 404 page
-func show404(w http.ResponseWriter, r *http.Request){
+func show404(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
-	w.Header().Set("COntent-Type", "text/html; charset= utf-8")
-	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, post-check=0, pre-check")
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, post-check=0, pre-check=0")
 	http.ServeFile(w, r, "./ui/static/404.html")
 }
 
-//show505 serves custom 500 page
 func show500(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusIntenalServerError)
+	w.WriteHeader(http.StatusInternalServerError)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, post-check=0, pre-check=0")
 	http.ServeFile(w, r, "./ui/static/500.html")
 }
 
-//printTemplateError displays template execution error
-func printTemplateError(w http.ResponseWriter, err error){
-	_, _ = fmt.Fprint(w, fmt.Sprintf(`<small><span class="text-danger">Error executing template: %s</span></small>`, err))
+func printTemplateError(w http.ResponseWriter, err error) {
+	_, _ = fmt.Fprint(w, fmt.Sprintf(`<small><span class='text-danger'>Error executing template: %s</span></small>`, err))
 }

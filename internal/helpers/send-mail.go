@@ -11,6 +11,6 @@ func SendEmail(mailMessage channeldata.MailData) {
 	}
 
 	//Create mail job and send to mail queue
-	job := channeldata.MailData{MailMessage: mailMessage}
+	job := channeldata.MailJob{MailMessage: mailMessage}
 	app.MailQueue <- job
 }
