@@ -15,6 +15,10 @@ import (
 	"vigilate/internal/templates"
 )
 
+//Package helpers provides functions for authentication, template rendering,
+//random strings,and handling server errors. It also integrates session and 
+//template default data management
+
 const (
 	letterBytes   = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	letterIdxBits = 6                    // 6 bits to represent a letter index
@@ -25,7 +29,7 @@ const (
 var app *config.AppConfig
 var src = rand.NewSource(time.Now().UnixNano())
 
-// NewHelpers creates new helpers
+// NewHelpers sets the global app config for helper package
 func NewHelpers(a *config.AppConfig) {
 	app = a
 }
@@ -40,6 +44,7 @@ func IsAuthenticated(r *http.Request) bool {
 func RandomString(n int) string {
 	b := make([]byte, n)
 
+	//Generate random letters efficiently
 	for i, theCache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
 		if remain == 0 {
 			theCache, remain = src.Int63(), letterIdxMax
@@ -84,6 +89,7 @@ func DefaultData(td templates.TemplateData, r *http.Request, w http.ResponseWrit
 		td.User = u
 	}
 
+	//Include session flash message 
 	td.Flash = app.Session.PopString(r.Context(), "flash")
 	td.Warning = app.Session.PopString(r.Context(), "warning")
 	td.Error = app.Session.PopString(r.Context(), "error")
@@ -94,20 +100,21 @@ func DefaultData(td templates.TemplateData, r *http.Request, w http.ResponseWrit
 // RenderPage renders a page using jet templates
 func RenderPage(w http.ResponseWriter, r *http.Request, templateName string, variables, data interface{}) error {
 	var vars jet.VarMap
-
+ 
+	//Prepare variables for template
 	if variables == nil {
 		vars = make(jet.VarMap)
 	} else {
 		vars = variables.(jet.VarMap)
 	}
 
-	// add default template data
+	// Prepare template data
 	var td templates.TemplateData
 	if data != nil {
 		td = data.(templates.TemplateData)
 	}
 
-	// add default data
+	// Merge default data, into template data
 	td = DefaultData(td, r, w)
 
 	// add template functions

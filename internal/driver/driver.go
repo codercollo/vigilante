@@ -9,13 +9,14 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
+//Package driver handles database connection pooling for the application
 
-// DB wraps the sql.DB connection pool
+// DB wraps the sql.DB connection pool for PostgreSQL
 type DB struct {
 	SQL *sql.DB
 }
 
-// Global DB instance
+// dbConn is a global instance of DB used throughout the application
 var dbConn = &DB{}
 
 // Database connection pool settings
@@ -24,6 +25,7 @@ const maxIdleDbConn = 25
 const maxDbLifetime = 5 * time.Minute
 
 // ConnectPostgres initializes and configures the Postgres connection pool
+// sets up connection pooling and verifies connectivity
 func ConnectPostgres(dsn string) (*DB, error) {
 	//Open connection using pgx driver
 	d, err := sql.Open("pgx", dsn)

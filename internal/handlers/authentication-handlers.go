@@ -12,6 +12,8 @@ import (
 	"vigilate/internal/models"
 )
 
+//Package handler contains HTTP handler functions for user authentication
+
 // LoginScreen shows the home (login) screen
 func (repo *DBRepo) LoginScreen(w http.ResponseWriter, r *http.Request) {
 	// if already logged in, take to dashboard
@@ -20,15 +22,19 @@ func (repo *DBRepo) LoginScreen(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//Render the login template
 	err := helpers.RenderPage(w, r, "login", nil, nil)
 	if err != nil {
 		printTemplateError(w, err)
 	}
 }
 
-// Login attempts to log the user in
+// Login handles user login form submission and session management
 func (repo *DBRepo) Login(w http.ResponseWriter, r *http.Request) {
+	//Renew session token for security
 	_ = repo.App.Session.RenewToken(r.Context())
+
+	//Parse form input
 	err := r.ParseForm()
 	if err != nil {
 		log.Println(err)
@@ -36,6 +42,7 @@ func (repo *DBRepo) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//Authenticate user credentials
 	id, hash, err := repo.DB.Authenticate(r.Form.Get("email"), r.Form.Get("password"))
 	if err == models.ErrInvalidCredentials {
 		app.Session.Put(r.Context(), "error", "Invalid login")
@@ -57,7 +64,9 @@ func (repo *DBRepo) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//Handle "remember me"
 	if r.Form.Get("remember") == "remember" {
+		//Generate a random token for persistent login
 		randomString := helpers.RandomString(12)
 		hasher := sha256.New()
 
@@ -68,12 +77,13 @@ func (repo *DBRepo) Login(w http.ResponseWriter, r *http.Request) {
 
 		sha := base64.URLEncoding.EncodeToString(hasher.Sum(nil))
 
+		//Save token to a database
 		err = repo.DB.InsertRememberMeToken(id, sha)
 		if err != nil {
 			log.Println(err)
 		}
 
-		// write a cookie
+		// Set remember-me cookie in browser
 		expire := time.Now().Add(365 * 24 * 60 * 60 * time.Second)
 		cookie := http.Cookie{
 			Name:     fmt.Sprintf("_%s_gowatcher_remember", app.PreferenceMap["identifier"]),
@@ -89,7 +99,7 @@ func (repo *DBRepo) Login(w http.ResponseWriter, r *http.Request) {
 		http.SetCookie(w, &cookie)
 	}
 
-	// we authenticated. Get the user.
+	// Fetch full user info from database
 	u, err := repo.DB.GetUserById(id)
 	if err != nil {
 		log.Println(err)
@@ -97,11 +107,13 @@ func (repo *DBRepo) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//Store user data and authentication info in session
 	app.Session.Put(r.Context(), "userID", id)
 	app.Session.Put(r.Context(), "hashedPassword", hash)
 	app.Session.Put(r.Context(), "flash", "You've been logged in successfully!")
 	app.Session.Put(r.Context(), "user", u)
 
+	//Redirect to target page or default dashboard
 	if r.Form.Get("target") != "" {
 		http.Redirect(w, r, r.Form.Get("target"), http.StatusSeeOther)
 		return
@@ -110,7 +122,7 @@ func (repo *DBRepo) Login(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/admin/overview", http.StatusSeeOther)
 }
 
-// Logout logs the user out
+// Logout logs the user out and ends user's session and clears cookies
 func (repo *DBRepo) Logout(w http.ResponseWriter, r *http.Request) {
 
 	// delete the remember me token, if any
@@ -141,10 +153,12 @@ func (repo *DBRepo) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 	http.SetCookie(w, &delCookie)
 
+	//Destroy session data
 	_ = app.Session.RenewToken(r.Context())
 	_ = app.Session.Destroy(r.Context())
 	_ = app.Session.RenewToken(r.Context())
 
+	//Flash logout message
 	repo.App.Session.Put(r.Context(), "flash", "You've been logged out successfully!")
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }

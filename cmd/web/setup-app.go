@@ -19,8 +19,17 @@ import (
 	"github.com/pusher/pusher-http-go"
 )
 
+//setupApp initializes the Vigilate application configuration, including:
+// - Reading CLI flags for server, database, and Pusher settings
+// - Connecting to the PostgreSQL database
+// - Setitng up session management with scs and Postgres store
+// - Initializing the mail job queue and worker dispatcher
+// - Loading application preferences and setting up Pusher WebSocket client
+// - Preparing global application and repository instances
+//
+
 func setupApp() (*string, error) {
-	// read flags
+	// Read CLI flags for configuration
 	insecurePort := flag.String("port", ":4000", "port to listen on")
 	identifier := flag.String("identifier", "vigilate", "unique identifier")
 	domain := flag.String("domain", "localhost", "domain name (e.g. example.com)")
@@ -40,15 +49,16 @@ func setupApp() (*string, error) {
 
 	flag.Parse()
 
+	//Ensure required flags are provided
 	if *dbUser == "" || *dbHost == "" || *dbPort == "" || *databaseName == "" || *identifier == "" {
 		fmt.Println("Missing required flags.")
 		os.Exit(1)
 	}
 
 	log.Println("Connecting to database....")
-	dsnString := ""
 
-	// when developing locally, we often don't have a db password
+	// Construct DSN (database connection string)
+	dsnString := ""
 	if *dbPass == "" {
 		dsnString = fmt.Sprintf("host=%s port=%s user=%s dbname=%s sslmode=%s timezone=UTC connect_timeout=5",
 			*dbHost,
@@ -66,12 +76,13 @@ func setupApp() (*string, error) {
 			*dbSsl)
 	}
 
+	// Connect to Postgres database
 	db, err := driver.ConnectPostgres(dsnString)
 	if err != nil {
 		log.Fatal("Cannot connect to database!", err)
 	}
 
-	// session
+	// Setup session manager with Postgres store
 	log.Printf("Initializing session manager....")
 	session = scs.New()
 	session.Store = postgresstore.New(db.SQL)
@@ -81,16 +92,16 @@ func setupApp() (*string, error) {
 	session.Cookie.SameSite = http.SameSiteLaxMode
 	session.Cookie.Secure = *inProduction
 
-	// start mail channel
+	// Initialize mail job queue and worker pool
 	log.Println("Initializing mail channel and worker pool....")
 	mailQueue := make(chan channeldata.MailJob, maxWorkerPoolSize)
 
-	// Start the email dispatcher
+	// Start the email dispatcher for sending emails asynchronously
 	log.Println("Starting email dispatcher....")
 	dispatcher := NewDispatcher(mailQueue, maxJobMaxWorkers)
 	dispatcher.run()
 
-	// define application configuration
+	// Set global application configuration
 	a := config.AppConfig{
 		DB:           db,
 		Session:      session,
@@ -104,9 +115,11 @@ func setupApp() (*string, error) {
 
 	app = a
 
+	// Initialize repository and handlers
 	repo = handlers.NewPostgresqlHandlers(db, &app)
 	handlers.NewHandlers(repo, &app)
 
+	// Load application preferences from database
 	log.Println("Getting preferences...")
 	preferenceMap = make(map[string]string)
 	preferences, err := repo.DB.AllPreferences()
@@ -118,6 +131,7 @@ func setupApp() (*string, error) {
 		preferenceMap[pref.Name] = string(pref.Preference)
 	}
 
+	// Add Pusher and app metadata to preference map
 	preferenceMap["pusher-host"] = *pusherHost
 	preferenceMap["pusher-port"] = *pusherPort
 	preferenceMap["pusher-key"] = *pusherKey
@@ -126,7 +140,7 @@ func setupApp() (*string, error) {
 
 	app.PreferenceMap = preferenceMap
 
-	// create pusher client
+	// Create Pusher WebSocket client for real-time events
 	wsClient = pusher.Client{
 		AppID:  *pusherApp,
 		Secret: *pusherSecret,
@@ -140,6 +154,7 @@ func setupApp() (*string, error) {
 
 	app.WsClient = wsClient
 
+	//Initialize helper utilities
 	helpers.NewHelpers(&app)
 
 	return insecurePort, err

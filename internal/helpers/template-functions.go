@@ -2,15 +2,21 @@ package helpers
 
 import "time"
 
+//Package helper provides utility functions for working with time values
+//and registers template functions for formating dates in Jet templates
+
 func addTemplateFunctions() {
+	//Add a gloabal template function to format a time in YYYY-MM-DD format
 	views.AddGlobal("humanDate", func(t time.Time) string {
 		return HumanDate(t)
 	})
 
+	//Add a global template function to format a time using a custom Go layout
 	views.AddGlobal("dateFromLayout", func(t time.Time, l string) string {
 		return FormatDateWithLayout(t, l)
 	})
 
+	//Add a global template function to check if a date is after year 1
 	views.AddGlobal("dateAfterYearOne", func(t time.Time) bool {
 		return DateAfterY1(t)
 	})

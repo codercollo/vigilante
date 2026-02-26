@@ -9,41 +9,48 @@ import (
 	"time"
 	"vigilate/internal/channeldata"
 
-	"github.com/aymerick/douceur/inliner"
-	mail "github.com/xhit/go-simple-mail/v2"
-	"jaytaylor.com/html2text"
+	"github.com/aymerick/douceur/inliner"  //For inlining CSS in HTML emails    
+	mail "github.com/xhit/go-simple-mail/v2"  //SMTP client
+	"jaytaylor.com/html2text"           //Convert HTML to plain text
 )
+//This code implements a concurrent email processing system using a worker pool
+//Incoming email jobs are dispatched to available workers, which render HTML templates,
+//incline CSS, convert to plain text, and send emails via SMTP server with support for 
+//attachments, and multiple recipients.
+
+
 
 // NewWorker creates a worker with id and worker pool reference
 func NewWorker(id int, workerPool chan chan channeldata.MailJob) Worker {
 	return Worker{
 		id:         id,
-		jobQueue:   make(chan channeldata.MailJob),
-		workerPool: workerPool,
-		quitChan:   make(chan bool),
+		jobQueue:   make(chan channeldata.MailJob), //Individuals worker's job channel
+		workerPool: workerPool,  //Reference to dispatcher pool
+		quitChan:   make(chan bool), //Channel to signal worker to quit
 	}
 }
 
 // Worker represents a mail processing worker
 type Worker struct {
 	id         int
-	jobQueue   chan channeldata.MailJob
+	jobQueue   chan channeldata.MailJob //Incoming jobs for this worker
 	workerPool chan chan channeldata.MailJob
-	quitChan   chan bool
+	quitChan   chan bool //signal to to stop worker
 }
 
 // start runs the worker loop
 func (w Worker) start() {
 	go func() {
 		for {
-			//Register worker's jobQueue in pool
+			//Register worker's jobQueue in pool so dispatcher knows it's available
 			w.workerPool <- w.jobQueue
 
 			select {
 			case job := <-w.jobQueue:
-				//Process mail job
+				//Receive a job, process the email
 				w.processMailQueueJob(job.MailMessage)
 			case <-w.quitChan:
+				//Stop signal received
 				fmt.Printf("worker%d stopping\n", w.id)
 				return
 			}
@@ -60,29 +67,33 @@ func (w Worker) stop() {
 
 // NewDispatcher creates a dispatcher with worker pool
 func NewDispatcher(jobQueue chan channeldata.MailJob, maxWorkers int) *Dispatcher {
+	//Pool of available workers
 	workerPool := make(chan chan channeldata.MailJob, maxWorkers)
 	return &Dispatcher{
-		jobQueue:   jobQueue,
-		maxWorkers: maxWorkers,
-		workerPool: workerPool,
+		jobQueue:   jobQueue,  //Incoming jobs channel
+		maxWorkers: maxWorkers,  //Maximum workers to spawn
+		workerPool: workerPool,  //Reference to worker pool
 	}
 
 }
 
 // Dispatcher manages workers and job distribution
 type Dispatcher struct {
-	workerPool chan chan channeldata.MailJob
+	workerPool chan chan channeldata.MailJob  //Channel of available worker queues
 	maxWorkers int
-	jobQueue   chan channeldata.MailJob
+	jobQueue   chan channeldata.MailJob  //jobs waiting to be processed
 }
 
 // run starts all workers and dispatcher loop
 func (d *Dispatcher) run() {
 	for i := 0; i < d.maxWorkers; i++ {
+		//Create worker
 		worker := NewWorker(i+1, d.workerPool)
+		//Start worker goroutine
 		worker.start()
 	}
 
+	//Start the dispatcher loop
 	go d.dispatch()
 }
 
@@ -92,7 +103,7 @@ func (d *Dispatcher) dispatch() {
 		select {
 		case job := <-d.jobQueue:
 			go func() {
-				//get free worker
+				//Wait for a free worker
 				workerJobQueue := <-d.workerPool
 				//send job to worker
 				workerJobQueue <- job
@@ -103,7 +114,7 @@ func (d *Dispatcher) dispatch() {
 
 // processMailQueueJob renders template and sends email
 func (w Worker) processMailQueueJob(mailMessage channeldata.MailData) {
-	//Choose template
+	//Default template if none provided
 	tmpl := "bootdtrap.mail.tmpl"
 	if mailMessage.Template != "" {
 		tmpl = mailMessage.Template
@@ -137,7 +148,7 @@ func (w Worker) processMailQueueJob(mailMessage channeldata.MailData) {
 		RowSets:       mailMessage.RowSets,
 	}
 
-	//Execute template
+	//Execute template into a buffer
 	var tpl bytes.Buffer
 	if err := t.Execute(&tpl, data); err != nil {
 		fmt.Print(err)
@@ -145,20 +156,20 @@ func (w Worker) processMailQueueJob(mailMessage channeldata.MailData) {
 
 	result := tpl.String()
 
-	//Convert HTML to plain text
+	//Convert HTML to plain text for email fallback
 	plainText, err := html2text.FromString(result, html2text.Options{PrettyTables: true})
 	if err != nil {
 		plainText = ""
 	}
 
-	//Inline CSS
+	//Inline CSS in HTML 
 	formattedMessage, err := inliner.Inline(result)
 	if err != nil {
 		log.Println(err)
 		formattedMessage = result
 	}
 
-	//Configure SMTP settings
+	//Configure SMTP server settings
 	port, _ := strconv.Atoi(preferenceMap["smtp_port"])
 
 	server := mail.NewSMTPClient()
@@ -167,7 +178,7 @@ func (w Worker) processMailQueueJob(mailMessage channeldata.MailData) {
 	server.Username = preferenceMap["smtp_user"]
 	server.Password = preferenceMap["smtp_password"]
 
-	//Choose authentication method
+	//Choose authentication method based on server
 	if preferenceMap["smtp_server"] == "localhost" {
 		server.Authentication = mail.AuthPlain
 	} else {
@@ -185,7 +196,7 @@ func (w Worker) processMailQueueJob(mailMessage channeldata.MailData) {
 		log.Println(err)
 	}
 
-	//Create email message
+	//Create email message object
 	email := mail.NewMSG()
 	email.SetFrom(mailMessage.FromAddress).
 		AddTo(mailMessage.ToAddress).

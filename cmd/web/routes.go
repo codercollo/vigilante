@@ -8,6 +8,8 @@ import (
 	"github.com/go-chi/chi"
 )
 
+//routes sets up all HTTP routes and middleware for the Vigilate
+
 func routes() http.Handler {
 
 	mux := chi.NewRouter()

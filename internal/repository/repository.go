@@ -2,6 +2,10 @@ package repository
 
 import "vigilate/internal/models"
 
+//Package repository defines the interface for database operations,
+//specifying methods for mananging users, authentication and system preferences
+//Implementations of this interface handle the actual database interactions
+
 //DatabaseRepo is the database repository
 type DatabaseRepo interface {
 	//Preferences

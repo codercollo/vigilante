@@ -2,6 +2,10 @@ package channeldata
 
 import "html/template"
 
+//Package channeldata defines the structures for email processing
+//MailData holds all information required to compose an email
+//MailJob wraps a MailData instance for processing in the mail worker queue
+
 //MailData holds info for sending an email
 type MailData struct {
 	ToName       string

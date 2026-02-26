@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"vigilate/internal/helpers"
 )
+//Package handlers contains HTTP handler functions for various routes
+
 
 // AllHealthyServices renders healthy services page
 func (repo *DBRepo) AllHealthyServices(w http.ResponseWriter, r *http.Request) {

@@ -5,6 +5,9 @@ import (
 	"time"
 )
 
+//Package models defines the core data structures and related errors
+//used across the application
+
 var (
 	//ErrNoRecord - no record found in database error
 	ErrNoRecord = errors.New("models: no matching record found")

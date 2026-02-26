@@ -18,23 +18,27 @@ import (
 	"github.com/go-chi/chi"
 )
 
-// Repo is the repository
+//Package handles provides HTTP handler functions for the admin panel,
+//user managemnt, site settings, hosts management. It connects the web layer
+//with databse operations via the repository pattern
+
+// Repo and app are global references for handler usage
 var Repo *DBRepo
 var app *config.AppConfig
 
-// DBRepo is the db repo
+// DBRepo represents the repository with DB and AppConfig acess
 type DBRepo struct {
 	App *config.AppConfig
 	DB  repository.DatabaseRepo
 }
 
-// NewHandlers creates the handlers
+// NewHandlers sets global repo and app references
 func NewHandlers(repo *DBRepo, a *config.AppConfig) {
 	Repo = repo
 	app = a
 }
 
-// NewPostgresqlHandlers creates db repo for postgres
+// NewPostgresqlHandlers creates a new DB epo for postgres
 func NewPostgresqlHandlers(db *driver.DB, a *config.AppConfig) *DBRepo {
 	return &DBRepo{
 		App: a,
@@ -72,7 +76,7 @@ func (repo *DBRepo) Settings(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// PostSettings saves site settings
+// PostSettings updates site preferences and persits them
 func (repo *DBRepo) PostSettings(w http.ResponseWriter, r *http.Request) {
 	prefMap := make(map[string]string)
 
@@ -98,6 +102,7 @@ func (repo *DBRepo) PostSettings(w http.ResponseWriter, r *http.Request) {
 		prefMap["notify_via_sms"] = "0"
 	}
 
+	// Save preferences to database
 	err := repo.DB.InsertOrUpdateSitePreferences(prefMap)
 	if err != nil {
 		log.Println(err)
@@ -105,13 +110,14 @@ func (repo *DBRepo) PostSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// update app config
+	// update application preference map
 	for k, v := range prefMap {
 		app.PreferenceMap[k] = v
 	}
 
 	app.Session.Put(r.Context(), "flash", "Changes saved")
 
+	//Redirect based on action value
 	if r.Form.Get("action") == "1" {
 		http.Redirect(w, r, "/admin/overview", http.StatusSeeOther)
 	} else {
@@ -260,6 +266,7 @@ func ServerError(w http.ResponseWriter, r *http.Request, err error) {
 	show500(w, r)
 }
 
+// show404 renders 404 error page
 func show404(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -267,6 +274,7 @@ func show404(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "./ui/static/404.html")
 }
 
+// show500 renders 500 error page
 func show500(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusInternalServerError)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -274,6 +282,7 @@ func show500(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "./ui/static/500.html")
 }
 
+// printTemplateError prints template execution errors
 func printTemplateError(w http.ResponseWriter, err error) {
 	_, _ = fmt.Fprint(w, fmt.Sprintf(`<small><span class='text-danger'>Error executing template: %s</span></small>`, err))
 }

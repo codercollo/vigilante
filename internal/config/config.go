@@ -10,6 +10,9 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
+//Package config defines the central application configuration structure
+//AppConfig holds global app settings
+
 // AppConfig holds application configuration
 type AppConfig struct {
 	DB            *driver.DB

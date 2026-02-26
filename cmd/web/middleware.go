@@ -11,12 +11,16 @@ import (
 	"github.com/justinas/nosurf"
 )
 
-// SessionLoad loads the session on requests
+//This file contains HTTP middleware for the Vigilate application
+//It includes session loading, authentication checks, CSRF protection
+//panic recovery and "remember me" functionality
+
+// SessionLoad loads the session from every incoming requests
 func SessionLoad(next http.Handler) http.Handler {
 	return session.LoadAndSave(next)
 }
 
-// Auth checks for authentication
+// Auth checks if a user is authenitcated before allowing access to a route
 func Auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !helpers.IsAuthenticated(r) {
@@ -30,7 +34,8 @@ func Auth(next http.Handler) http.Handler {
 	})
 }
 
-// RecoverPanic recovers from a panic
+// RecoverPanic recovers from panic(s) during HTTP request handling
+// and returns a 500 Internal Server Error page instead of crashing the server
 func RecoverPanic(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
@@ -44,13 +49,15 @@ func RecoverPanic(next http.Handler) http.Handler {
 	})
 }
 
-// NoSurf implements CSRF protection
+// NoSurf adds CSRF protection to HTTP requests using the nosurf package
 func NoSurf(next http.Handler) http.Handler {
 	csrfHandler := nosurf.New(next)
 
+	//Exempt certain routes from CSRF checks
 	csrfHandler.ExemptPath("/pusher/auth")
 	csrfHandler.ExemptPath("/pusher/hook")
 
+	//Configure CSRF cookie
 	csrfHandler.SetBaseCookie(http.Cookie{
 		HttpOnly: true,
 		Path:     "/",
@@ -62,7 +69,8 @@ func NoSurf(next http.Handler) http.Handler {
 	return csrfHandler
 }
 
-// CheckRemember checks to see if we should log the user in automatically
+// CheckRemember checks for "remember me" cookies and logs the user in automatically
+// if a valid token exists
 func CheckRemember(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !helpers.IsAuthenticated(r) {
@@ -71,15 +79,18 @@ func CheckRemember(next http.Handler) http.Handler {
 				next.ServeHTTP(w, r)
 			} else {
 				key := cookie.Value
-				// have a remember token, so try to log the user in
 				if len(key) > 0 {
-					// key length > 0, so it might br a valid token
+					// split the cookie value to get user ID and hash
 					split := strings.Split(key, "|")
 					uid, hash := split[0], split[1]
 					id, _ := strconv.Atoi(uid)
+
+					//validate the remember token
 					validHash := repo.DB.CheckForToken(id, hash)
 					if validHash {
-						// valid remember me token, so log the user in
+						// valid remember me token, so log the user in;
+						// populate session with user info
+
 						_ = session.RenewToken(r.Context())
 						user, _ := repo.DB.GetUserById(id)
 						hashedPassword := user.Password
@@ -91,7 +102,7 @@ func CheckRemember(next http.Handler) http.Handler {
 						session.Put(r.Context(), "user", user)
 						next.ServeHTTP(w, r)
 					} else {
-						// invalid token, so delete the cookie
+						// invalid token, so delete the cookie and log-out
 						deleteRememberCookie(w, r)
 						session.Put(r.Context(), "error", "You've been logged out from another device!")
 						next.ServeHTTP(w, r)
@@ -130,7 +141,7 @@ func CheckRemember(next http.Handler) http.Handler {
 	})
 }
 
-// deleteRememberCookie deletes the remember me cookie, and logs the user out
+// deleteRememberCookie deletes the remember me cookie, and logs the user out, clears the session
 func deleteRememberCookie(w http.ResponseWriter, r *http.Request) {
 	_ = session.RenewToken(r.Context())
 	// delete the cookie

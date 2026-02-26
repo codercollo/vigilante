@@ -15,6 +15,10 @@ import (
 	"github.com/pusher/pusher-http-go"
 )
 
+//This is the main entry point for the Vigilate application
+//It initializes the database connection, session manager, mail dispatcher, and websocket client
+//It also loads user preferences, sets up application-wide configuration, and starts the HTTP server
+
 // Application-wide configuration
 var app config.AppConfig
 
