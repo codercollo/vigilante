@@ -1,34 +1,280 @@
 {{extends "./layouts/layout.jet"}}
 
 {{block css()}}
-<style>
-
-</style>
-{{end}}
-
+<style></style>
+{{ end }}
 
 {{block cardTitle()}}
 Host
-{{end}}
-
+{{ end }}
 
 {{block cardContent()}}
 {{prefMap := .PreferenceMap}}
 
 <div class="row">
-    <div class="col">
-        <ol class="breadcrumb mt-1">
-            <li class="breadcrumb-item"><a href="/admin/overview">Overview</a></li>
-            <li class="breadcrumb-item"><a href="/admin/host/all">Hosts</a></li>
-            <li class="breadcrumb-item active">Host</li>
-        </ol>
-        <h4 class="mt-4">Host</h4>
-        <hr>
-    </div>
+  <div class="col">
+    <ol class="breadcrumb mt-1">
+      <li class="breadcrumb-item"><a href="/admin/overview">Overview</a></li>
+      <li class="breadcrumb-item"><a href="/admin/host/all">Hosts</a></li>
+      <li class="breadcrumb-item active">Host</li>
+    </ol>
+    <h4 class="mt-4">Host</h4>
+    <hr />
+  </div>
 </div>
-{{end}}
 
+<div class="row">
+  <div class="col">
+    <form
+      action="post"
+      action="/admin/host/0"
+      novalidate
+      class="needs-validation"
+      id="host-form"
+    >
+      <ul class="nav nav-tabs" id="host-tabs">
+        <li class="nav-item">
+          <a
+            href="#host-content"
+            class="nav-link active"
+            data-target=""
+            data-toggle="tab"
+            id="host-tab"
+            role="tab"
+            >Host</a
+          >
+        </li>
+        <li class="nav-item">
+          <a
+            href="#services-content"
+            class="nav-link"
+            data-target=""
+            data-toggle="tab"
+            id="services-tab"
+            role="tab"
+            >Manage Services</a
+          >
+        </li>
+        <li class="nav-item">
+          <a
+            href="#healthy-content"
+            class="nav-link"
+            data-target=""
+            data-toggle="tab"
+            id="healthy-tab"
+            role="tab"
+            >Healthy</a
+          >
+        </li>
+        <li class="nav-item">
+          <a
+            href="#warning-content"
+            class="nav-link"
+            data-target=""
+            data-toggle="tab"
+            id="warning-tab"
+            role="tab"
+            >Warning</a
+          >
+        </li>
+        <li class="nav-item">
+          <a
+            href="#problem-content"
+            class="nav-link"
+            data-target=""
+            data-toggle="tab"
+            id="problem-tab"
+            role="tab"
+            >Problems</a
+          >
+        </li>
+        <li class="nav-item">
+          <a
+            href="#pending-content"
+            class="nav-link"
+            data-target=""
+            data-toggle="tab"
+            id="problem-tab"
+            role="tab"
+            >Pending</a
+          >
+        </li>
+      </ul>
+
+      <div class="tab-content" id="host-tab-content" style="...">
+        <div
+          class="tab-pane fade show active"
+          id="host-content"
+          role="tabpanel"
+          aria-labelledby="host-tab"
+        >
+          <div class="row">
+            <div class="col-md-6 col-xs-12">
+              <div class="mt-3 mb-3">
+                <label for="host_name" class="form-label">Home Name</label>
+                <input
+                  type="text"
+                  name="host_name"
+                  id="host_name"
+                  class="form-control"
+                  value=""
+                />
+              </div>
+              <div class="mb-3">
+                <label for="canonical_name" class="form-label"
+                  >Canonical Name</label
+                >
+                <input
+                  type="text"
+                  name="canonical_name"
+                  id="canonical_name"
+                  class="form-control"
+                  value=""
+                />
+              </div>
+              <div class="mb-3">
+                <label for="url" class="form-label">URL</label>
+                <input
+                  type="text"
+                  name="url"
+                  id="url"
+                  class="form-control"
+                  value=""
+                />
+              </div>
+              <div class="mb-3">
+                <label for="ip" class="form-label">IP Address (v4)</label>
+                <input
+                  type="text"
+                  name="ip"
+                  id="ip"
+                  class="form-control"
+                  value=""
+                />
+              </div>
+              <div class="mb-3">
+                <label for="ipv6" class="form-label">IP Address (v6)</label>
+                <input
+                  type="text"
+                  name="ipv6"
+                  id="ipv6"
+                  class="form-control"
+                  value=""
+                />
+              </div>
+            </div>
+            <div class="col-md-6 col-xs-12">
+              <div class="mt-3 mb-3">
+                <label for="location" class="form-label">Location</label>
+                <input
+                  type="text"
+                  name="location"
+                  id="location"
+                  class="form-control"
+                  value=""
+                />
+              </div>
+              <div class="mb-3">
+                <label for="os" class="form-label">Operating System</label>
+                <input
+                  type="text"
+                  name="os"
+                  id="os"
+                  class="form-control"
+                  value=""
+                />
+              </div>
+              <div class="form-check form-switch">
+                <input
+                  type="checkbox"
+                  id="active"
+                  name="active"
+                  class="form-check-input"
+                />
+                <label for="active" class="form-check-label">Active</label>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col">
+              <hr />
+
+              <div class="btn-group dropend">
+                <button
+                  type="button"
+                  class="btn btn-primary dropdown-toggle"
+                  data-toggle="dropdown"
+                  aria-haspopup="true"
+                  aria-expanded="false"
+                >
+                  Save
+                </button>
+                <div class="dropdown-menu">
+                  <a
+                    class="dropdown-item"
+                    href="javascript:void(0);"
+                    onclick="saveClose()"
+                    >Save &amp; Close</a
+                  >
+                  <a
+                    class="dropdown-item"
+                    href="javascript:void(0);"
+                    onclick="val()"
+                    >Save &amp; Continue</a
+                  >
+                </div>
+              </div>
+
+              <a class="btn btn-info" href="/admin/host/all">Cancel</a>
+            </div>
+          </div>
+        </div>
+        <div
+          class="tab-pane fade"
+          id="services-content"
+          role="tabpanel"
+          aria-labelledby="services-tab"
+        >
+          Services Content
+        </div>
+        <div
+          class="tab-pane fade"
+          id="healthy-content"
+          role="tabpanel"
+          aria-labelledby="healthy-tab"
+        >
+          Healthy Content
+        </div>
+        <div
+          class="tab-pane fade"
+          id="warning-content"
+          role="tabpanel"
+          aria-labelledby="warning-tab"
+        >
+          Warning Content
+        </div>
+        <div
+          class="tab-pane fade"
+          id="problem-content"
+          role="tabpanel"
+          aria-labelledby="problem-tab"
+        >
+          Problem Content
+        </div>
+        <div
+          class="tab-pane fade"
+          id="pending-content"
+          role="tabpanel"
+          aria-labelledby="pending-tab"
+        >
+          Pending Content
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{{ end }}
 
 {{ block js() }}
 
-{{end}}
+{{ end }}
