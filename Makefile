@@ -16,8 +16,8 @@ IN_PRODUCTION ?= false
 PUSHER_HOST ?= localhost
 PUSHER_PORT ?= 4001
 PUSHER_APP ?= 1
-PUSHER_KEY ?= 123abc
-PUSHER_SECRET ?= abc123
+PUSHER_KEY ?= abc123
+PUSHER_SECRET ?= 123abc
 PUSHER_SECURE ?= false
 
 # === Commands ===

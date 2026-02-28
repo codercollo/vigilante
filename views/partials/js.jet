@@ -11,7 +11,11 @@
       disabledTransports: []
   });
 
-  let publicChannel = pusher.subscribe("public_channel");
+  let publicChannel = pusher.subscribe("public-channel");
+
+  publicChannel.bind("test-event", function(data) {
+    successAlert(data.message)
+  })
 
   let attention = Prompt();
 
