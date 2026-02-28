@@ -1,15 +1,29 @@
+<script src="/static/admin/js/pusher.min.js"></script>
+
 <script>
-    let attention = Prompt();
+    //Initialize Pusher client with local WebSocket settings, and subscribe to a public channel
+  let pusher = new Pusher("{{.PreferenceMap["pusher-key"]}}", {
+      authEndpoint: "/pusher/auth",
+      wsHost: "localhost",
+      wsPort: 4001,
+      forceTLS: false,
+      enabledTransports: ["ws"],
+      disabledTransports: []
+  });
 
-    {{if .Flash != ""}}
-        successAlert('{{.Flash}}')
-    {{end}}
+  let publicChannel = pusher.subscribe("public_channel");
 
-    {{if .Warning != ""}}
-        warningAlert('{{.Warning}}')
-    {{end}}
+  let attention = Prompt();
 
-    {{if .Error != ""}}
-        errorAlert('{{.Error}}')
-    {{end}}
+  {{if .Flash != ""}}
+      successAlert('{{.Flash}}')
+  {{end}}
+
+  {{if .Warning != ""}}
+      warningAlert('{{.Warning}}')
+  {{end}}
+
+  {{if .Error != ""}}
+      errorAlert('{{.Error}}')
+  {{end}}
 </script>

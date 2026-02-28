@@ -14,10 +14,10 @@ IN_PRODUCTION ?= false
 
 # Mail and pusher defaults
 PUSHER_HOST ?= localhost
-PUSHER_PORT ?= 443
-PUSHER_APP ?= 9
-PUSHER_KEY ?=
-PUSHER_SECRET ?=
+PUSHER_PORT ?= 4001
+PUSHER_APP ?= 1
+PUSHER_KEY ?= 123abc
+PUSHER_SECRET ?= abc123
 PUSHER_SECURE ?= false
 
 # === Commands ===
