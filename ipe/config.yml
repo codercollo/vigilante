@@ -1,11 +1,11 @@
 ---
-host: "4001"
+host: ":4001"
 profiling: false
 ssl:
-  enable: false
+  # enable: false
   host: ":4343"
   key_file: "key_pem"
-  cerf_file: "cert.pem"
+  cert_file: "cert.pem"
 apps:
   - name: "App"
     enabled: true
