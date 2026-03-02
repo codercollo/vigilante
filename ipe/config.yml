@@ -2,7 +2,7 @@
 host: ":4001"
 profiling: false
 ssl:
-  enable: false
+  enabled: false
   host: ":4343"
   key_file: "key_pem"
   cert_file: "cert.pem"

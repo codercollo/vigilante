@@ -26,12 +26,14 @@ Host
 <div class="row">
   <div class="col">
     <form
-      action="post"
+      method="post"
       action="/admin/host/0"
       novalidate
       class="needs-validation"
       id="host-form"
     >
+      <input type="hidden" name="action" value="1" id="action" />
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}" />
       <ul class="nav nav-tabs" id="host-tabs">
         <li class="nav-item">
           <a
@@ -118,6 +120,7 @@ Host
                   id="host_name"
                   class="form-control"
                   value=""
+                  required
                 />
               </div>
               <div class="mb-3">
@@ -130,6 +133,7 @@ Host
                   id="canonical_name"
                   class="form-control"
                   value=""
+                  required
                 />
               </div>
               <div class="mb-3">
@@ -140,6 +144,7 @@ Host
                   id="url"
                   class="form-control"
                   value=""
+                  required
                 />
               </div>
               <div class="mb-3">
@@ -276,5 +281,37 @@ Host
 {{ end }}
 
 {{ block js() }}
+
+<script>
+  function val() {
+    document.getElementById("action").value = 0;
+    let form = document.getElementById("host-form");
+    if (form.checkValidity() === false) {
+      errorAlert("Error: check all tabs!");
+      this.event.preventDefault();
+      this.event.stopPropagation();
+    }
+    form.classList.add("was-validated");
+
+    if (form.checkValidity() === true) {
+      form.submit();
+    }
+  }
+
+  function saveClose() {
+    document.getElementById("action").value = 1;
+    let form = document.getElementById("host-form");
+    if (form.checkValidity() === false) {
+      errorAlert("Error: check all tabs");
+      this.event.preventDefault();
+      this.event.stopPropagation();
+    }
+    form.classList.add("was-validated");
+
+    if (form.checkValidity() === true) {
+      form.submit();
+    }
+  }
+</script>
 
 {{ end }}
