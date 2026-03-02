@@ -194,13 +194,8 @@ Host
                 />
               </div>
               <div class="form-check form-switch">
-                <input
-                  type="checkbox"
-                  id="active"
-                  name="active"
-                  class="form-check-input"
-                  value="{{ host.Active }}"
-                />
+                <!-- prettier-ignore -->
+                <input type="checkbox" value="1" {{ if host.Active == 1 }}checked{{ end }} id="active" name="active" class="form-check-input"/>
                 <label for="active" class="form-check-label">Active</label>
               </div>
             </div>
