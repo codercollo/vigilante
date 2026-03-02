@@ -27,7 +27,7 @@ Host
   <div class="col">
     <form
       method="post"
-      action="/admin/host/0"
+      action="/admin/host/{{ host.ID }}"
       novalidate
       class="needs-validation"
       id="host-form"
@@ -136,7 +136,7 @@ Host
                   name="canonical_name"
                   id="canonical_name"
                   class="form-control"
-                  value=""
+                  value="{{ host.CanonicalName }}"
                   required
                 />
               </div>
@@ -147,7 +147,7 @@ Host
                   name="url"
                   id="url"
                   class="form-control"
-                  value=""
+                  value="{{ host.URL }}"
                   required
                 />
               </div>
@@ -158,7 +158,7 @@ Host
                   name="ip"
                   id="ip"
                   class="form-control"
-                  value=""
+                  value="{{ host.IP }}"
                 />
               </div>
               <div class="mb-3">
@@ -168,7 +168,7 @@ Host
                   name="ipv6"
                   id="ipv6"
                   class="form-control"
-                  value=""
+                  value="{{ host.IPV6 }}"
                 />
               </div>
             </div>
@@ -180,7 +180,7 @@ Host
                   name="location"
                   id="location"
                   class="form-control"
-                  value=""
+                  value="{{ host.Location }}"
                 />
               </div>
               <div class="mb-3">
@@ -190,7 +190,7 @@ Host
                   name="os"
                   id="os"
                   class="form-control"
-                  value=""
+                  value="{{ host.OS }}"
                 />
               </div>
               <div class="form-check form-switch">
@@ -199,6 +199,7 @@ Host
                   id="active"
                   name="active"
                   class="form-check-input"
+                  value="{{ host.Active }}"
                 />
                 <label for="active" class="form-check-label">Active</label>
               </div>
