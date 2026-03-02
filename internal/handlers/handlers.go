@@ -140,6 +140,12 @@ func (repo *DBRepo) Host(w http.ResponseWriter, r *http.Request) {
 	var h models.Host
 	if id > 0 {
 		//Get host from the db
+		host, err := repo.DB.GetHostByID(id)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		h = host
 	}
 
 	vars := make(jet.VarMap)
@@ -151,16 +157,18 @@ func (repo *DBRepo) Host(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// PostHost handles posting a host form
+// PostHost handles submission of the host add/edit form
 func (repo *DBRepo) PostHost(w http.ResponseWriter, r *http.Request) {
+	//Get host ID from URL parameter
 	id, _ := strconv.Atoi(chi.URLParam(r, "id"))
 
 	var h models.Host
 	var hostID int
 
 	if id > 0 {
-
+		//TODO: Fetch existing host and update
 	} else {
+		//Populate host struct from form values
 		h.HostName = r.Form.Get("host_name")
 		h.CanonicalName = r.Form.Get("canonical_name")
 		h.URL = r.Form.Get("url")
@@ -168,17 +176,24 @@ func (repo *DBRepo) PostHost(w http.ResponseWriter, r *http.Request) {
 		h.IPV6 = r.Form.Get("ipv6")
 		h.Location = r.Form.Get("location")
 		h.OS = r.Form.Get("os")
+		//Convert active field from form value to int
 		active, _ := strconv.Atoi(r.Form.Get("active"))
 		h.Active = active
 
+		//Insert new hsot into db
 		newID, err := repo.DB.InsertHost(h)
 		if err != nil {
 			log.Println(err)
 			helpers.ServerError(w, r, err)
 			return
+
 		}
+
+		//Store newly created ID for redirect
 		hostID = newID
 	}
+
+	//Add success message to session and redirect to edit page
 	repo.App.Session.Put(r.Context(), "flash", "Changes saved")
 	http.Redirect(w, r, fmt.Sprintf("/admin/host/%d", hostID), http.StatusSeeOther)
 }

@@ -27,4 +27,6 @@ type DatabaseRepo interface {
 
 	//Hosts
 	InsertHost(h models.Host) (int, error)
+	GetHostByID(id int) (models.Host, error)
+	UpdateHost(h models.Host) error
 }
