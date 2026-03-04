@@ -215,8 +215,9 @@ func (m *postgresDBRepo) UpdateHost(h models.Host) error {
 	return nil
 }
 
-// GetHostByID retrieves a single host by ID
-// Including all associated services for that host
+// GetHostByID retrieves all host records from the database
+// For each host, it also loads and attaches all associated services
+// Hosts are returned ordered alphabetically by host name
 func (m *postgresDBRepo) AllHosts() ([]models.Host, error) {
 	//Create context with 3-second timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -237,7 +238,7 @@ func (m *postgresDBRepo) AllHosts() ([]models.Host, error) {
 
 	var hosts []models.Host
 
-	//Iterate through result rows
+	//Iterate through each host row
 	for rows.Next() {
 		var h models.Host
 
@@ -260,6 +261,7 @@ func (m *postgresDBRepo) AllHosts() ([]models.Host, error) {
 			return nil, err
 		}
 
+		//Query to retrieve all services associated with the current host
 		serviceQuery := `
 				 select
 	              hs.id, hs.host_id, hs.service_id, hs.active, hs.schedule_number, hs.schedule_unit,
@@ -277,8 +279,10 @@ func (m *postgresDBRepo) AllHosts() ([]models.Host, error) {
 			return nil, err
 		}
 		var hostServices []models.HostService
+		//Iterate through all services linked to the current host
 		for serviceRows.Next() {
 			var hs models.HostService
+			//Scan services record and related service metadata
 			err = serviceRows.Scan(
 				&hs.ID,
 				&hs.HostID,
@@ -301,10 +305,16 @@ func (m *postgresDBRepo) AllHosts() ([]models.Host, error) {
 				log.Println(err)
 				return nil, err
 			}
+
 			hostServices = append(hostServices, hs)
-			serviceRows.Close()
 		}
+		//Attach services to the current host
 		h.HostServices = hostServices
+
+		//Close service rows before processing the next host
+		serviceRows.Close()
+
+		//Append fully populated host to the slice
 		hosts = append(hosts, h)
 	}
 
@@ -336,4 +346,33 @@ func (m *postgresDBRepo) UpdateHostServiceStatus(hostID, serviceID, active int) 
 	}
 
 	return nil
+}
+
+func (m *postgresDBRepo) GetAllServiceStatusCounts() (int, int, int, int, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	query := `
+	        select 
+					   (select count(id) from host_services where active = 1 and status = 'pending') as pending,
+						 (select count(id) from host_services where active = 1 and status = 'healthy') as healthy,
+						 (select count(id) from host_services where active = 1 and status = 'warning') as warning,
+						 (select count(id) from host_services where active = 1 and status = 'problem') as problem
+	
+	`
+
+	var pending, healthy, warning, problem int
+
+	row := m.DB.QueryRowContext(ctx, query)
+	err := row.Scan(
+		&pending,
+		&healthy,
+		&warning,
+		&problem,
+	)
+	if err != nil {
+		return 0, 0, 0, 0, err
+	}
+
+	return pending, healthy, warning, problem, nil
 }
