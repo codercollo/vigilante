@@ -155,3 +155,59 @@ func (m *postgresDBRepo) UpdateHost(h models.Host) error {
 
 	return nil
 }
+
+func (m *postgresDBRepo) AllHosts() ([]models.Host, error) {
+	//Create context with 3-second timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	//Query to fetch all hosts ordered by host name
+	query := `
+	 select id, host_name, canonical_name, url, ip, ipv6, location, os,
+	 active, created_at, updated_at from hosts order by host_name
+	 `
+
+	//Execute query
+	rows, err := m.DB.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var hosts []models.Host
+
+	//Iterate through result rows
+	for rows.Next() {
+		var h models.Host
+
+		//Scan row into Host struct
+		err = rows.Scan(
+			&h.ID,
+			&h.HostName,
+			&h.CanonicalName,
+			&h.URL,
+			&h.IP,
+			&h.IPV6,
+			&h.Location,
+			&h.OS,
+			&h.Active,
+			&h.CreatedAt,
+			&h.UpdatedAt,
+		)
+		if err != nil {
+			log.Println(err)
+			return nil, err
+		}
+		//Append hsot to slice
+		hosts = append(hosts, h)
+	}
+
+	//Check for iteration errors
+	if err = rows.Err(); err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	//Return all hosts
+	return hosts, nil
+}
