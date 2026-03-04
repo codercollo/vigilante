@@ -51,6 +51,15 @@ returning id`
 		return newID, err
 	}
 
+	stmt := `
+					insert into host_services (host_id, service_id, active, schedule_number, schedule_unit, 
+					status, created_at, updated_at) values ($1, 1, 0, 3, 'm', 'pending', $2, $3)
+	`
+	_, err = m.DB.ExecContext(ctx, stmt, newID, time.Now(), time.Now())
+	if err != nil {
+		return newID, err
+	}
+
 	//Return the new record ID on success
 	return newID, nil
 }
@@ -99,6 +108,53 @@ func (m *postgresDBRepo) GetHostByID(id int) (models.Host, error) {
 		return h, err
 	}
 
+	query = `select
+	              hs.id, hs.host_id, hs.service_id, hs.active, hs.schedule_number, hs.schedule_unit,
+	              hs.last_check, hs.status, hs.created_at, hs.updated_at,
+								s.id, s.service_name, s.active, s.icon, s.created_at, s.updated_at
+					  from
+						    host_services hs
+								left join services s on (s.id = hs.service_id)
+					  where
+					     	host_id = $1`
+
+	rows, err := m.DB.QueryContext(ctx, query, h.ID)
+	if err != nil {
+		log.Println(err)
+		return h, err
+	}
+	defer rows.Close()
+
+	var hostServices []models.HostService
+
+	for rows.Next() {
+		var hs models.HostService
+		err := rows.Scan(
+			&hs.ID,
+			&hs.HostID,
+			&hs.ServiceID,
+			&hs.Active,
+			&hs.ScheduleNumber,
+			&hs.ScheduleUnit,
+			&hs.LastCheck,
+			&hs.Status,
+			&hs.CreatedAt,
+			&hs.UpdatedAt,
+			&hs.Service.ID,
+			&hs.Service.ServicesName,
+			&hs.Service.Active,
+			&hs.Service.Icon,
+			&hs.Service.CreatedAt,
+			&hs.Service.UpdatedAt,
+		)
+		if err != nil {
+			log.Println(err)
+			return h, err
+		}
+		hostServices = append(hostServices, hs)
+	}
+
+	h.HostServices = hostServices
 	//Return populated Host struct
 	return h, nil
 }
@@ -210,4 +266,24 @@ func (m *postgresDBRepo) AllHosts() ([]models.Host, error) {
 
 	//Return all hosts
 	return hosts, nil
+}
+
+// UpdateHostServiceStatus updates the active status of a service for a host
+func (m *postgresDBRepo) UpdateHostServiceStatus(hostID, serviceID, active int) error {
+	//Create context with timeout to prevent long-running queries
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	//Update active column for specific host and service
+	stmt := `
+	     update host_services set active = $1 where host_id = $2 and service_id = $3		
+	`
+
+	//Execute update
+	_, err := m.DB.ExecContext(ctx, stmt, active, hostID, serviceID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

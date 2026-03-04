@@ -241,7 +241,68 @@ Host
           role="tabpanel"
           aria-labelledby="services-tab"
         >
-          Services Content
+          <div class="row">
+            <div class="col">
+              <h3 class="mt-3">Services</h3>
+              <table class="table table-striped">
+                <thead>
+                  <tr>
+                    <th>Services</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!--  
+                  <tr>
+                    <td>HTTP</td>
+                    <td>
+                      <div class="form-check form-switch">
+                        <input
+                          type="checkbox"
+                          value="1"
+                          id="http_service"
+                          name="http"
+                          data-host-id="{{ host.ID }}"
+                          data-type="toggle-service"
+                          class="form-check-input"
+                        />
+                        <label for="active" class="form-check-label"
+                          >Active</label
+                        >
+                      </div>
+                    </td>
+                  </tr>
+                -->
+                  {{range host.HostServices}}
+                  <tr>
+                    <td>{{.Service.ServicesName}}</td>
+                    <td>
+                      <!-- prettier-ignore -->
+                      <div class="form-check form-switch">
+                        <input
+                          type="checkbox"
+                          value="1"       
+                          data-host-id="{{.HostID }}"
+                          data-service="{{.ServiceID}}"
+                          class="form-check-input"
+                          data-type="toggle-service"
+                          {{if .Active == 1}} checked {{end}}
+                          name="{{.Service.ServicesName}}"
+
+                        />
+                        <label for="active" class="form-check-label"
+                          >Active</label
+                        >
+                      </div>
+                    </td>
+                  </tr>
+                  {{
+                    end
+                  }}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
         <div
           class="tab-pane fade"
@@ -285,22 +346,71 @@ Host
 {{ block js() }}
 
 <script>
+  document.addEventListener("DOMContentLoaded", function () {
+    //Select all elements that have data-service attrivute
+    let toggles = document.querySelectorAll("[data-service]");
+
+    //Loop through each toggle switch
+    for (let i = 0; i < toggles.length; i++) {
+      //Listen for change event when checkbox is toggled
+      toggles[i].addEventListener("change", function () {
+        let active = "0";
+
+        if (this.checked) {
+          active = "1";
+        }
+        //formData object to send via AJAX
+        let formData = new FormData();
+
+        //Append required values for backend
+        formData.append("host_id", this.getAttribute("data-host-id"));
+        formData.append("service_id", this.getAttribute("data-service"));
+        formData.append("active", active);
+        formData.append("csrf_token", "{{.CSRFToken}}");
+
+        //Send POST request to the backend
+        fetch("/admin/host/ajax/toggle-service", {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            //Show alert based on response
+            if (data.ok) {
+              successAlert("Changes saved");
+            } else {
+              errorAlert("Something went wrong");
+            }
+          });
+      });
+    }
+  });
+
+  //Save and Continue
   function val() {
+    //Set action flag
     document.getElementById("action").value = 0;
     let form = document.getElementById("host-form");
+
+    //If form invalid, stop submission
     if (form.checkValidity() === false) {
       errorAlert("Error: check all tabs!");
       this.event.preventDefault();
       this.event.stopPropagation();
     }
+
+    //Add bootstrap validation class
     form.classList.add("was-validated");
 
+    //Submit if valid
     if (form.checkValidity() === true) {
       form.submit();
     }
   }
 
+  //Save and Close
   function saveClose() {
+    //Set action flag
     document.getElementById("action").value = 1;
     let form = document.getElementById("host-form");
     if (form.checkValidity() === false) {
