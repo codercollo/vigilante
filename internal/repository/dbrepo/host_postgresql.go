@@ -65,6 +65,7 @@ returning id`
 }
 
 // GetHostByID retrieves a single host record by its ID
+// It also loads all associated services linked to the host
 func (m *postgresDBRepo) GetHostByID(id int) (models.Host, error) {
 	//Create a context with 3-sec timeout prevents long running queries
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -108,6 +109,7 @@ func (m *postgresDBRepo) GetHostByID(id int) (models.Host, error) {
 		return h, err
 	}
 
+	//Query to retieve all services associated with the host
 	query = `select
 	              hs.id, hs.host_id, hs.service_id, hs.active, hs.schedule_number, hs.schedule_unit,
 	              hs.last_check, hs.status, hs.created_at, hs.updated_at,
@@ -129,6 +131,7 @@ func (m *postgresDBRepo) GetHostByID(id int) (models.Host, error) {
 
 	for rows.Next() {
 		var hs models.HostService
+		//Scan services and related services metadata
 		err := rows.Scan(
 			&hs.ID,
 			&hs.HostID,
@@ -212,6 +215,8 @@ func (m *postgresDBRepo) UpdateHost(h models.Host) error {
 	return nil
 }
 
+// GetHostByID retrieves a single host by ID
+// Including all associated services for that host
 func (m *postgresDBRepo) AllHosts() ([]models.Host, error) {
 	//Create context with 3-second timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -223,7 +228,7 @@ func (m *postgresDBRepo) AllHosts() ([]models.Host, error) {
 	 active, created_at, updated_at from hosts order by host_name
 	 `
 
-	//Execute query
+	//Execute query and return a single row
 	rows, err := m.DB.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
@@ -236,7 +241,7 @@ func (m *postgresDBRepo) AllHosts() ([]models.Host, error) {
 	for rows.Next() {
 		var h models.Host
 
-		//Scan row into Host struct
+		//Scan database row into Host struct fields
 		err = rows.Scan(
 			&h.ID,
 			&h.HostName,
@@ -254,7 +259,52 @@ func (m *postgresDBRepo) AllHosts() ([]models.Host, error) {
 			log.Println(err)
 			return nil, err
 		}
-		//Append hsot to slice
+
+		serviceQuery := `
+				 select
+	              hs.id, hs.host_id, hs.service_id, hs.active, hs.schedule_number, hs.schedule_unit,
+	              hs.last_check, hs.status, hs.created_at, hs.updated_at,
+								s.id, s.service_name, s.active, s.icon, s.created_at, s.updated_at
+					  from
+						    host_services hs
+								left join services s on (s.id = hs.service_id)
+					  where
+					     	host_id = $1`
+
+		serviceRows, err := m.DB.QueryContext(ctx, serviceQuery, h.ID)
+		if err != nil {
+			log.Println(err)
+			return nil, err
+		}
+		var hostServices []models.HostService
+		for serviceRows.Next() {
+			var hs models.HostService
+			err = serviceRows.Scan(
+				&hs.ID,
+				&hs.HostID,
+				&hs.ServiceID,
+				&hs.Active,
+				&hs.ScheduleNumber,
+				&hs.ScheduleUnit,
+				&hs.LastCheck,
+				&hs.Status,
+				&hs.CreatedAt,
+				&hs.UpdatedAt,
+				&hs.Service.ID,
+				&hs.Service.ServicesName,
+				&hs.Service.Active,
+				&hs.Service.Icon,
+				&hs.Service.CreatedAt,
+				&hs.Service.UpdatedAt,
+			)
+			if err != nil {
+				log.Println(err)
+				return nil, err
+			}
+			hostServices = append(hostServices, hs)
+			serviceRows.Close()
+		}
+		h.HostServices = hostServices
 		hosts = append(hosts, h)
 	}
 
