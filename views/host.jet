@@ -275,7 +275,7 @@ Host
                 -->
                   {{range host.HostServices}}
                   <tr>
-                    <td>{{.Service.ServicesName}}</td>
+                    <td>{{.Service.ServiceName}}</td>
                     <td>
                       <!-- prettier-ignore -->
                       <div class="form-check form-switch">
@@ -287,7 +287,7 @@ Host
                           class="form-check-input"
                           data-type="toggle-service"
                           {{if .Active == 1}} checked {{end}}
-                          name="{{.Service.ServicesName}}"
+                          name="{{.Service.ServiceName}}"
 
                         />
                         <label for="active" class="form-check-label"
@@ -347,6 +347,22 @@ Host
 
 <script>
   document.addEventListener("DOMContentLoaded", function () {
+    // Activate tab from URL hash
+    let hash = window.location.hash;
+    if (hash) {
+      let tab = document.querySelector('a[href="' + hash + '"]');
+      if (tab) {
+        document
+          .querySelectorAll(".nav-link")
+          .forEach((t) => t.classList.remove("active"));
+        document
+          .querySelectorAll(".tab-pane")
+          .forEach((p) => p.classList.remove("show", "active"));
+        tab.classList.add("active");
+        document.querySelector(hash).classList.add("show", "active");
+      }
+    }
+
     //Select all elements that have data-service attrivute
     let toggles = document.querySelectorAll("[data-service]");
 

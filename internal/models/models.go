@@ -61,12 +61,12 @@ type Host struct {
 
 // Sevices model
 type Services struct {
-	ID           int
-	ServicesName string
-	Active       int
-	Icon         string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID          int
+	ServiceName string
+	Active      int
+	Icon        string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 // HostService model
@@ -82,4 +82,5 @@ type HostService struct {
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	Service        Services
+	HostName       string
 }

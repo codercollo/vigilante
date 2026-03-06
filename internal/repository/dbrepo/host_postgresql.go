@@ -53,7 +53,7 @@ returning id`
 
 	stmt := `
 					insert into host_services (host_id, service_id, active, schedule_number, schedule_unit, 
-					status, created_at, updated_at) values ($1, 1, 0, 3, 'm', 'pending', $2, $3)
+					status, created_at, updated_at) values ($1, 1, 1, 3, 'm', 'pending', $2, $3)
 	`
 	_, err = m.DB.ExecContext(ctx, stmt, newID, time.Now(), time.Now())
 	if err != nil {
@@ -144,7 +144,7 @@ func (m *postgresDBRepo) GetHostByID(id int) (models.Host, error) {
 			&hs.CreatedAt,
 			&hs.UpdatedAt,
 			&hs.Service.ID,
-			&hs.Service.ServicesName,
+			&hs.Service.ServiceName,
 			&hs.Service.Active,
 			&hs.Service.Icon,
 			&hs.Service.CreatedAt,
@@ -295,7 +295,7 @@ func (m *postgresDBRepo) AllHosts() ([]models.Host, error) {
 				&hs.CreatedAt,
 				&hs.UpdatedAt,
 				&hs.Service.ID,
-				&hs.Service.ServicesName,
+				&hs.Service.ServiceName,
 				&hs.Service.Active,
 				&hs.Service.Icon,
 				&hs.Service.CreatedAt,
@@ -375,4 +375,57 @@ func (m *postgresDBRepo) GetAllServiceStatusCounts() (int, int, int, int, error)
 	}
 
 	return pending, healthy, warning, problem, nil
+}
+
+func (m *postgresDBRepo) GetServicesByStatus(status string) ([]models.HostService, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	query := `
+	select 
+		hs.id, hs.host_id, hs.service_id, hs.active, hs.schedule_number, hs.schedule_unit,
+		hs.last_check, hs.status, hs.created_at, hs.updated_at,
+		h.host_name, s.service_name
+	from
+		host_services hs
+	left join hosts h on hs.host_id = h.id
+	left join services s on hs.service_id = s.id
+	where
+		hs.status = $1
+	and hs.active = 1
+	`
+
+	var services []models.HostService
+
+	rows, err := m.DB.QueryContext(ctx, query, status)
+	if err != nil {
+		return services, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var h models.HostService
+
+		err := rows.Scan(
+			&h.ID,
+			&h.HostID,
+			&h.ServiceID,
+			&h.Active,
+			&h.ScheduleNumber,
+			&h.ScheduleUnit,
+			&h.LastCheck,
+			&h.Status,
+			&h.CreatedAt,
+			&h.UpdatedAt,
+			&h.HostName,
+			&h.Service.ServiceName,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		services = append(services, h)
+	}
+
+	return services, nil
 }
