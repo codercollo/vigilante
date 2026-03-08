@@ -379,6 +379,7 @@ Host
                       </span>
                     </td>
                     <td>{{.LastCheck}}</td>
+                    >
                     <td></td>
                   </tr>
                   {{
@@ -458,15 +459,22 @@ Host
                   {{if .Status == "pending"}}
                   <tr>
                     <td>
+                      <span class="{{.Service.Icon}}"></span>
                       {{.Service.ServiceName}}
                       <span
                         class="badge bg-secondary ml-2"
-                        onclick="checkNow({{.ID}})"
+                        onclick="checkNow({{.ID}}, 'pending')"
                       >
                         Check Now
                       </span>
                     </td>
-                    <td>{{.LastCheck}}</td>
+                    <td>
+                      {{if dateAfterYearOne(.LastCheck)}}
+                      {{dateFromLayout(.LastCheck, "2006-01-02 15:04")}}
+                      {{else}}
+                      Pending...
+                      {{ end }}
+                    </td>
                     <td></td>
                   </tr>
                   {{
@@ -585,7 +593,13 @@ Host
     }
   }
 
-  function checkNow() {}
+  function checkNow(id, oldStatus) {
+    fetch("/admin/perform-check/" + id + "/" + oldStatus)
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("Ok:", data.ok, "message:", data.message);
+      });
+  }
 </script>
 
 {{ end }}
