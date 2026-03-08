@@ -310,7 +310,43 @@ Host
           role="tabpanel"
           aria-labelledby="healthy-tab"
         >
-          Healthy Content
+          <div class="row">
+            <div class="col">
+              <h4 class="pt-3">Healthy Services</h4>
+              <table class="table table-striped">
+                <thead>
+                  <tr>
+                    <th>Service</th>
+                    <th>Last Check</th>
+                    <th>Message</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {{range host.HostServices}}
+                  {{if .Status == "healthy"}}
+                  <tr>
+                    <td>
+                      {{.Service.ServiceName}}
+                      <span
+                        class="badge bg-secondary ml-2"
+                        onclick="checkNow({{.ID}})"
+                      >
+                        Check Now
+                      </span>
+                    </td>
+                    <td>{{.LastCheck}}</td>
+                    <td></td>
+                  </tr>
+                  {{
+                    end
+                  }}
+                  {{
+                    end
+                  }}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
         <div
           class="tab-pane fade"
@@ -318,7 +354,43 @@ Host
           role="tabpanel"
           aria-labelledby="warning-tab"
         >
-          Warning Content
+          <div class="row">
+            <div class="col">
+              <h4 class="pt-3">Warning Services</h4>
+              <table class="table table-striped">
+                <thead>
+                  <tr>
+                    <th>Service</th>
+                    <th>Last Check</th>
+                    <th>Message</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {{range host.HostServices}}
+                  {{if .Status == "warning"}}
+                  <tr>
+                    <td>
+                      {{.Service.ServiceName}}
+                      <span
+                        class="badge bg-secondary ml-2"
+                        onclick="checkNow({{.ID}})"
+                      >
+                        Check Now
+                      </span>
+                    </td>
+                    <td>{{.LastCheck}}</td>
+                    <td></td>
+                  </tr>
+                  {{
+                    end
+                  }}
+                  {{
+                    end
+                  }}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
         <div
           class="tab-pane fade"
@@ -326,7 +398,43 @@ Host
           role="tabpanel"
           aria-labelledby="problem-tab"
         >
-          Problem Content
+          <div class="row">
+            <div class="col">
+              <h4 class="pt-3">Problem Services</h4>
+              <table class="table table-striped">
+                <thead>
+                  <tr>
+                    <th>Service</th>
+                    <th>Last Check</th>
+                    <th>Message</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {{range host.HostServices}}
+                  {{if .Status == "problem"}}
+                  <tr>
+                    <td>
+                      {{.Service.ServiceName}}
+                      <span
+                        class="badge bg-secondary ml-2"
+                        onclick="checkNow({{.ID}})"
+                      >
+                        Check Now
+                      </span>
+                    </td>
+                    <td>{{.LastCheck}}</td>
+                    <td></td>
+                  </tr>
+                  {{
+                    end
+                  }}
+                  {{
+                    end
+                  }}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
         <div
           class="tab-pane fade"
@@ -334,7 +442,43 @@ Host
           role="tabpanel"
           aria-labelledby="pending-tab"
         >
-          Pending Content
+          <div class="row">
+            <div class="col">
+              <h4 class="pt-3">Pending Services</h4>
+              <table class="table table-striped">
+                <thead>
+                  <tr>
+                    <th>Service</th>
+                    <th>Last Check</th>
+                    <th>Message</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {{range host.HostServices}}
+                  {{if .Status == "pending"}}
+                  <tr>
+                    <td>
+                      {{.Service.ServiceName}}
+                      <span
+                        class="badge bg-secondary ml-2"
+                        onclick="checkNow({{.ID}})"
+                      >
+                        Check Now
+                      </span>
+                    </td>
+                    <td>{{.LastCheck}}</td>
+                    <td></td>
+                  </tr>
+                  {{
+                    end
+                  }}
+                  {{
+                    end
+                  }}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
         {{ end }}
       </div>
@@ -440,6 +584,8 @@ Host
       form.submit();
     }
   }
+
+  function checkNow() {}
 </script>
 
 {{ end }}

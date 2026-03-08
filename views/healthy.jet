@@ -2,49 +2,66 @@
 
 {{block css()}}
 
-{{end}}
-
+{{ end }}
 
 {{block cardTitle()}}
-    Healthy Services
-{{end}}
-
+Healthy Services
+{{ end }}
 
 {{block cardContent()}}
 <div class="row">
-    <div class="col">
-        <ol class="breadcrumb mt-1">
-            <li class="breadcrumb-item"><a href="/admin/overview">Overview</a></li>
-            <li class="breadcrumb-item active">Healthy Services</li>
-        </ol>
-        <h4 class="mt-4">Healthy Services</h4>
-        <hr>
-    </div>
+  <div class="col">
+    <ol class="breadcrumb mt-1">
+      <li class="breadcrumb-item"><a href="/admin/overview">Overview</a></li>
+      <li class="breadcrumb-item active">Healthy Services</li>
+    </ol>
+    <h4 class="mt-4">Healthy Services</h4>
+    <hr />
+  </div>
 </div>
 
 <div class="row">
-    <div class="col">
-
-        <table class="table table-condensed table-striped">
-            <thead>
-            <tr>
-                <th>Host</th>
-                <th>Service</th>
-                <th>Status</th>
-                <th>Message</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr>
-                <td colspan="5">No services</td>
-            </tr>
-            </tbody>
-        </table>
-    </div>
+  <div class="col">
+    <table class="table table-condensed table-striped">
+      <thead>
+        <tr>
+          <th>Host</th>
+          <th>Service</th>
+          <th>Status</th>
+          <th>Message</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{if len(services) > 0}}
+        {{range services}}
+        <tr>
+          <td>
+            <a href="/admin/host/{{.HostID}}#healthy-content">
+              {{.HostName}}
+            </a>
+          </td>
+          <td>{{.Service.ServiceName}}</td>
+          <td>
+            <span class="badge bg-success"> {{.Status}}</span>
+          </td>
+        </tr>
+        {{
+          end
+        }}
+        {{else}}
+        <tr>
+          <td colspan="4">No services</td>
+        </tr>
+        {{
+          end
+        }}
+      </tbody>
+    </table>
+  </div>
 </div>
 
-{{end}}
+{{ end }}
 
 {{block js()}}
 
-{{end}}
+{{ end }}
