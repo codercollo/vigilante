@@ -17,6 +17,7 @@ import (
 	"github.com/alexedwards/scs/postgresstore"
 	"github.com/alexedwards/scs/v2"
 	"github.com/pusher/pusher-http-go"
+	"github.com/robfig/cron/v3"
 )
 
 //setupApp initializes the Vigilate application configuration, including:
@@ -154,6 +155,13 @@ func setupApp() (*string, error) {
 
 	app.WsClient = wsClient
 
+	localZone, _ := time.LoadLocation("Local")
+	scheduler := cron.New(cron.WithLocation(localZone), cron.WithChain(
+		cron.DelayIfStillRunning(cron.DefaultLogger),
+		cron.Recover(cron.DefaultLogger),
+	))
+
+	app.Scheduler = scheduler
 	//Initialize helper utilities
 	helpers.NewHelpers(&app)
 

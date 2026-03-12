@@ -51,7 +51,7 @@ Pending Services
         }}
         {{else}}
         <td>
-          <tr colspan="4"></tr>
+          <tr colspan="4">No services</tr>
         </td>
 
         {{

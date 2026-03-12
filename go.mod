@@ -11,7 +11,7 @@ require (
 	github.com/jackc/pgx/v5 v5.8.0
 	github.com/justinas/nosurf v1.2.0
 	github.com/pusher/pusher-http-go v4.0.1+incompatible
-	github.com/robfig/cron/v3 v3.0.1
+	github.com/robfig/cron/v3 v3.0.0
 	github.com/xhit/go-simple-mail/v2 v2.16.0
 	golang.org/x/crypto v0.44.0
 	jaytaylor.com/html2text v0.0.0-20230321000545-74c2419ad056

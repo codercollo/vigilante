@@ -2,14 +2,25 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
+	"vigilate/internal/models"
 
 	"github.com/go-chi/chi"
 )
 
+// Types of services
+const (
+	HTTP           = 1
+	HTTPS          = 2
+	SSLCertificate = 3
+)
+
+// JSON resp sent to client
 type jsonResp struct {
 	OK            bool      `json:"ok"`
 	Message       string    `json:"message"`
@@ -21,26 +32,104 @@ type jsonResp struct {
 	LastCheck     time.Time `json:"last_check"`
 }
 
+// TestCheck does manual service checks via HTTP endpoint
 func (repo *DBRepo) TestCheck(w http.ResponseWriter, r *http.Request) {
+	//Extract host service record and old status from URL
 	hostServiceID, _ := strconv.Atoi(chi.URLParam(r, "id"))
 	oldStatus := chi.URLParam(r, "oldStatus")
-
+	okay := true
 	log.Println(hostServiceID, oldStatus)
-	//get host service
 
-	//get host
+	//Fetch host_services record from DB
+	hs, err := repo.DB.GetHostServiceByID(hostServiceID)
+	if err != nil {
+		log.Println(err)
+		okay = false
+	}
+	log.Println("Service name is", hs.Service.ServiceName)
 
-	//test the service
+	//Fetch the host record for this service
+	h, err := repo.DB.GetHostByID(hs.HostID)
+	if err != nil {
+		log.Println(err)
+		okay = false
 
-	//create json
-
-	//send json to client
-	resp := jsonResp{
-		OK:      true,
-		Message: "test message",
 	}
 
+	//Run the actual service test based on service type
+	msg, newStatus := repo.testServiceForHost(h, hs)
+
+	//update the host service in the database with status (if changed) and last check
+	hs.Status = newStatus
+	hs.LastCheck = time.Now()
+	hs.UpdatedAt = time.Now()
+	err = repo.DB.UpdateHostService(hs)
+	if err != nil {
+		log.Println(err)
+		okay = false
+	}
+	//broadcast service status changed event
+
+	var resp jsonResp
+
+	//send json to client
+	if okay {
+		resp = jsonResp{
+			OK:            true,
+			Message:       msg,
+			ServiceID:     hs.ServiceID,
+			HostServiceID: hs.ID,
+			HostID:        hs.HostID,
+			OldStatus:     oldStatus,
+			NewStatus:     newStatus,
+			LastCheck:     time.Now(),
+		}
+	} else {
+		resp.OK = false
+		resp.Message = "Something went wrong!"
+	}
+
+	// Marshal JSON and sent to client
 	out, _ := json.MarshalIndent(resp, "", "  ")
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(out)
+}
+
+// testServiceForHost determines which test to run depending on service type
+func (repo *DBRepo) testServiceForHost(h models.Host, hs models.HostService) (string, string) {
+	var msg, newStatus string
+
+	switch hs.ServiceID {
+	case HTTP:
+		//Run HTTP test for this host
+		msg, newStatus = testHTTPForHost(h.URL)
+
+	}
+	return msg, newStatus
+}
+
+// testHTTPForHost performs actual HTTP GET request to check if host is reachable
+func testHTTPForHost(url string) (string, string) {
+	//Normalize URL : remove trailing slash
+	if strings.HasSuffix(url, "/") {
+		url = strings.TrimSuffix(url, "/")
+	}
+
+	//Convert https to http
+	url = strings.Replace(url, "https://", "http://", -1)
+
+	//Make GET request
+	resp, err := http.Get(url)
+	if err != nil {
+		return fmt.Sprintf("%s - %s", url, "error connecting"), "problem"
+	}
+	defer resp.Body.Close()
+
+	//Check HTTP status code
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Sprintf("%s - %s", url, resp.Status), "problem"
+	}
+
+	//Status 200 = healthy
+	return fmt.Sprintf("%s - %s", url, resp.Status), "healthy"
 }
