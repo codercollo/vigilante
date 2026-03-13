@@ -47,9 +47,9 @@ func (repo *DBRepo) StartMonitoring() {
 
 			if x.ScheduleUnit == "d" {
 				//Scheduler doesn't support days directly so convert days to hrs
-				sch = fmt.Sprintf("@every %s%s", x.ScheduleNumber*24, "h")
+				sch = fmt.Sprintf("@every %d%s", x.ScheduleNumber*24, "h")
 			} else {
-				sch = fmt.Sprintf("@every %s%s", x.ScheduleNumber, x.ScheduleUnit)
+				sch = fmt.Sprintf("@every %d%s", x.ScheduleNumber, x.ScheduleUnit)
 
 			}
 
@@ -99,7 +99,7 @@ func (repo *DBRepo) StartMonitoring() {
 			payload["schedule"] = fmt.Sprintf("@every %d%s", x.ScheduleNumber, x.ScheduleUnit)
 
 			//Notify clients about the next sheduled run
-			err = app.WsClient.Trigger("puclic-channel", "next-run-event", payload)
+			err = app.WsClient.Trigger("public-channel", "next-run-event", payload)
 			if err != nil {
 				log.Println(err)
 			}

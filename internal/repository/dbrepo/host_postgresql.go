@@ -215,7 +215,7 @@ func (m *postgresDBRepo) UpdateHost(h models.Host) error {
 	return nil
 }
 
-// GetHostByID retrieves all host records from the database
+// AllHosts retrieves all host records from the database
 // For each host, it also loads and attaches all associated services
 // Hosts are returned ordered alphabetically by host name
 func (m *postgresDBRepo) AllHosts() ([]models.Host, error) {
@@ -521,15 +521,16 @@ func (m *postgresDBRepo) GetHostServiceByID(id int) (models.HostService, error) 
 }
 
 // GetServicesToMonitor returns all active host services that should be monitored
-// It joins host_services, services, and hosts tables and filter only active records
+// It joins host_services, services, and hosts tables and filters only active records
 func (m *postgresDBRepo) GetServicesToMonitor() ([]models.HostService, error) {
 	//Create a context with timeout to prevent long DB queries
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	//SQL query to fetch active services on active hosts
+
 	query := `
-		select hs.id, hs.host_id, hs.service_id, hs.active, hs.scheduler_number,
+		select hs.id, hs.host_id, hs.service_id, hs.active, hs.schedule_number,
 					hs.schedule_unit, hs.last_check, hs.status, hs.created_at, hs.updated_at,
 					s.id, s.service_name, s.active, s.icon, s.created_at, s.updated_at,
 					h.host_name
@@ -539,16 +540,16 @@ func (m *postgresDBRepo) GetServicesToMonitor() ([]models.HostService, error) {
 		where
 		    h.active = 1
 				and hs.active = 1
-					
-	
 	`
 
 	var services []models.HostService
 
 	// Execute query
+
 	rows, err := m.DB.QueryContext(ctx, query)
 	if err != nil {
 		log.Println(err)
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -578,7 +579,7 @@ func (m *postgresDBRepo) GetServicesToMonitor() ([]models.HostService, error) {
 		)
 		if err != nil {
 			log.Println(err)
-			return services, err
+			return nil, err
 		}
 
 		//Add service to result slice

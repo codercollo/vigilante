@@ -107,7 +107,7 @@ func (m *postgresDBRepo) UpdateSystemPref(name, value string) error {
 
 	// SQL query
 	query := `
-			update preferences set preferences = $1, updated_at = $2, where name = $3
+			update preferences set preference = $1, updated_at = $2 where name = $3
 	`
 	// Execute query
 	_, err := m.DB.ExecContext(ctx, query, value, time.Now(), name)

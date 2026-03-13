@@ -15,10 +15,23 @@
    //Subscribe to a public broadcast channel
    let publicChannel = pusher.subscribe("public-channel");
 
-   //Listen for "test-event" from backend and show alert
-   publicChannel.bind("test-event", function(data) {
+   //Listen for "app-starting" from backend and show alert
+   publicChannel.bind("app-starting", function(data) {
      successAlert(data.message)
    })
+
+      //Listen for "app-starting" from backend and show alert
+   publicChannel.bind("app-stopping", function(data) {
+     warningAlert(data.message)
+   })
+
+   //things we want to look for:
+   // - service goes down
+   // - service comes up
+   // - service status changed
+   // - scheduled changed
+   // - monitoring is turned off
+   // - next-run-event changes
 
    //Custom alert/confirmation helper
    let attention = Prompt();
@@ -91,7 +104,7 @@
                  })
              }else {
                 //Enable monitoring
-                    updateSystemPref("monitoring-live", "0")
+                    updateSystemPref("monitoring-live", "1")
                     toggleMonitoring(1)
              }
       })
@@ -133,7 +146,7 @@
      let formData = new FormData()
 
       // send enabled flag to backend
-     formData.append("enabled", prefName)
+     formData.append("enabled", enabled)
      formData.append("csrf_token", "{{.CSRFToken}}")
      let ajax = new XMLHttpRequest()
      ajax.responseType = "json"

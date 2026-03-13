@@ -456,6 +456,7 @@ func (repo *DBRepo) ToggleMonitoring(w http.ResponseWriter, r *http.Request) {
 	if enabled == "1" {
 		//Start monitoring jobs
 		log.Println("Turning monitoring on")
+		repo.App.PreferenceMap["monitoring_live"] = "1"
 		repo.StartMonitoring()
 
 		//Start cron scheduler
@@ -463,6 +464,7 @@ func (repo *DBRepo) ToggleMonitoring(w http.ResponseWriter, r *http.Request) {
 	} else {
 		//Stop monitoring jobs
 		log.Println("Turning monitoring off")
+		repo.App.PreferenceMap["monitoring_live"] = "0"
 
 		//Remove scheduled jobs using stored IDs
 		for _, x := range repo.App.MonitorMap {
@@ -481,6 +483,17 @@ func (repo *DBRepo) ToggleMonitoring(w http.ResponseWriter, r *http.Request) {
 
 		//Stop scheduler
 		repo.App.Scheduler.Stop()
+
+		//Prepare websocket message data
+		data := make(map[string]string)
+		data["message"] = "Monitoring is off!"
+
+		//Notify all connected clients that monitoring has started
+		err := app.WsClient.Trigger("public-channel", "app-stopping", data)
+		if err != nil {
+			log.Println(err)
+		}
+
 	}
 
 	//Send JSON response
