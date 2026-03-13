@@ -419,3 +419,76 @@ func (repo *DBRepo) ToggleServiceForHost(w http.ResponseWriter, r *http.Request)
 	w.Write(out)
 
 }
+
+// SetSystemPref updates a system preference in the DB and updates the
+// in-memory preference map
+func (repo *DBRepo) SetSystemPref(w http.ResponseWriter, r *http.Request) {
+	//Get preference name and value from POST form
+	prefName := r.PostForm.Get("pref_name")
+	prefValue := r.PostForm.Get("pref_value")
+
+	var resp jsonResp
+	resp.OK = true
+	resp.Message = ""
+
+	//Persist preference changes to DB
+	err := repo.DB.UpdateSystemPref(prefName, prefValue)
+	if err != nil {
+		resp.OK = false
+		resp.Message = err.Error()
+	}
+
+	// Update runtime preference map
+	repo.App.PreferenceMap["monitoring_live"] = prefValue
+
+	//Return JSON response
+	out, _ := json.MarshalIndent(resp, "", " ")
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(out)
+}
+
+// TogglerMonitoring starts or stops the monitoring scheduler
+func (repo *DBRepo) ToggleMonitoring(w http.ResponseWriter, r *http.Request) {
+	//Read monitoring state (1 = enabled,  0 = disable )
+	enabled := r.PostForm.Get("enabled")
+	log.Println(enabled)
+
+	if enabled == "1" {
+		//Start monitoring jobs
+		log.Println("Turning monitoring on")
+		repo.StartMonitoring()
+
+		//Start cron scheduler
+		repo.App.Scheduler.Start()
+	} else {
+		//Stop monitoring jobs
+		log.Println("Turning monitoring off")
+
+		//Remove scheduled jobs using stored IDs
+		for _, x := range repo.App.MonitorMap {
+			repo.App.Scheduler.Remove(x)
+		}
+
+		//Clear job tracking map
+		for k := range repo.App.MonitorMap {
+			delete(repo.App.MonitorMap, k)
+		}
+
+		//Ensure all scheduler entries are removed
+		for _, i := range repo.App.Scheduler.Entries() {
+			repo.App.Scheduler.Remove(i.ID)
+		}
+
+		//Stop scheduler
+		repo.App.Scheduler.Stop()
+	}
+
+	//Send JSON response
+	var resp jsonResp
+	resp.OK = true
+
+	out, _ := json.MarshalIndent(resp, "", " ")
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(out)
+}

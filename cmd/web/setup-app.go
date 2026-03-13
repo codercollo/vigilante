@@ -150,18 +150,39 @@ func setupApp() (*string, error) {
 		Host:   fmt.Sprintf("%s:%s", *pusherHost, *pusherPort),
 	}
 
+	//Log websocket host and port and if connection is secure {HTTPS}
 	log.Println("Host", fmt.Sprintf("%s:%s", *pusherHost, *pusherPort))
 	log.Println("Secure", *pusherSecure)
 
+	//Store websocket client for broadcasting events
 	app.WsClient = wsClient
 
-	localZone, _ := time.LoadLocation("Local")
-	scheduler := cron.New(cron.WithLocation(localZone), cron.WithChain(
-		cron.DelayIfStillRunning(cron.DefaultLogger),
-		cron.Recover(cron.DefaultLogger),
-	))
+	//Map to track scheduled jobs (serviceID > jobID)
+	monitorMap := make(map[int]cron.EntryID)
 
+	//Save job tracking map in app state
+	app.MonitorMap = monitorMap
+
+	//Load system local timezone for scheduler
+	localZone, _ := time.LoadLocation("Local")
+
+	//Create cron scheduler
+	scheduler := cron.New(
+		//Run jobs using local timezone
+		cron.WithLocation(localZone),
+		//Add safety middleware to jobs
+		cron.WithChain(
+			//Delay next run if job still executing
+			cron.DelayIfStillRunning(cron.DefaultLogger),
+			//Recover from panics to avoid scheduler crash
+			cron.Recover(cron.DefaultLogger),
+		))
+
+	//Save scheduler so jobs can be added later
 	app.Scheduler = scheduler
+
+	go handlers.Repo.StartMonitoring()
+
 	//Initialize helper utilities
 	helpers.NewHelpers(&app)
 

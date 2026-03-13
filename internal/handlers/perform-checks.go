@@ -32,6 +32,11 @@ type jsonResp struct {
 	LastCheck     time.Time `json:"last_check"`
 }
 
+// ScheduledCheck performs a scheduled check on a host service by id
+func (repo *DBRepo) ScheduledCheck(hostServiceID int) {
+
+}
+
 // TestCheck does manual service checks via HTTP endpoint
 func (repo *DBRepo) TestCheck(w http.ResponseWriter, r *http.Request) {
 	//Extract host service record and old status from URL
