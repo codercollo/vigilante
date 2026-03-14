@@ -34,7 +34,8 @@ Overview
   <div class="col-xl-3 col-md-6">
     <div class="card border-success mb-4" style="border: 1px solid red">
       <div class="card-body text-success">
-        {{ no_healthy }} Healthy service{{if no_healthy != 1}}s{{ end }}
+        <span class="health_count">{{ no_healthy }} </span>
+        Healthy service(s)
       </div>
       <div
         class="card-footer d-flex align-items-center justify-content-between"
@@ -50,7 +51,8 @@ Overview
   <div class="col-xl-3 col-md-6">
     <div class="card border-warning mb-4">
       <div class="card-body text-warning">
-        {{ no_warning }} Warning service{{if no_warning != 1}}s{{ end }}
+        <span class="warning_count">{{ no_warning }} </span>
+        Warning service(s)
       </div>
       <div
         class="card-footer d-flex align-items-center justify-content-between"
@@ -66,7 +68,8 @@ Overview
   <div class="col-xl-3 col-md-6">
     <div class="card border-danger mb-4">
       <div class="card-body text-danger">
-        {{ no_problem }} Problem service{{if no_problem != 1}}s{{ end }}
+        <span class="problem_count">{{ no_problem }}</span>
+        Problem service(s)
       </div>
       <div
         class="card-footer d-flex align-items-center justify-content-between"
@@ -82,7 +85,8 @@ Overview
   <div class="col-xl-3 col-md-6">
     <div class="card border-secondary mb-4">
       <div class="card-body text-dark">
-        {{ no_pending }} Pending service{{if no_pending != 1}}s{{ end }}
+        <span class="pending_count"> {{ no_pending }} </span>
+        Pending service(s)
       </div>
       <div
         class="card-footer d-flex align-items-center justify-content-between"

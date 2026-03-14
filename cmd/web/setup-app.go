@@ -182,7 +182,10 @@ func setupApp() (*string, error) {
 	app.Scheduler = scheduler
 
 	go handlers.Repo.StartMonitoring()
-	app.Scheduler.Start()
+
+	if app.PreferenceMap["monitoring_live"] == "1" {
+		app.Scheduler.Start()
+	}
 
 	//Initialize helper utilities
 	helpers.NewHelpers(&app)
