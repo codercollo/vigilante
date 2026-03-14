@@ -3,6 +3,8 @@ package models
 import (
 	"errors"
 	"time"
+
+	"github.com/robfig/cron/v3"
 )
 
 //Package models defines the core data structures and related errors
@@ -83,4 +85,16 @@ type HostService struct {
 	UpdatedAt      time.Time
 	Service        Services
 	HostName       string
+}
+
+// Schedule model
+type Schedule struct {
+	ID            int
+	EntryID       cron.EntryID
+	Entry         cron.Entry
+	Host          string
+	Service       string
+	LastRunFromHS time.Time
+	HostServiceID int
+	ScheduleText  string
 }
