@@ -182,6 +182,7 @@ func setupApp() (*string, error) {
 	app.Scheduler = scheduler
 
 	go handlers.Repo.StartMonitoring()
+	app.Scheduler.Start()
 
 	//Initialize helper utilities
 	helpers.NewHelpers(&app)
