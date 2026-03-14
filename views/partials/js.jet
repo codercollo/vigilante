@@ -34,38 +34,95 @@
         showCloseButton: true,
       })
 
-      let exists = !!document.getElementById("host-service-" + data.host_service_id)
-      if (exists) {
-        let row = document.getElementById("host-service-" + data.host_service_id)
-        row.parentNode.removeChild(row)
-      }
+      //delete from if it exists
+      deleteHostServiceRow(data.host_service_id)
 
-      let tableExists = !!document.getElementById(data.status + "-table")
-      if (tableExists) {
-        let tableRef = document.getElementById(data.status + "-table")
-        let newRow = tableRef.tBodies[0].insertRow(-1)
+      //add new if table exists
+      updateHostServiceTable(data)
 
-        newRow.setAttribute("id", "host-service-" + data.host_service_id)
-
-        let newCell = newRow.insertCell(0)
-        newCell.innerHTML = `
-          <span class= "badge bg-secondary pointer" onclick="checkNow(${data.host_service_id})", '${data.status}')">
-                Check Now
-           </span>
-        `
-        newCell = newRow.insertCell(1)
-        if (data.status !== "pending") {
-            newCell.innerHTML = `${data.last_check}`
-        } else {
-            newCell.innerHTML = "Pending..."
-        }
-
-        newCell = newRow.innerHTML(2)
-      }
 
 
    })
 
+   function deleteHostServiceRow(hostServiceID) {
+    //remove existing table row if it exists
+    let exits = !!document.getElementById("host-service-" + hostServiceID)
+    if (exits) {
+        let row = document.getElementById("host-service-" + hostServiceID)
+        row.parentNode.removeChild(row)
+
+        //if this was the last row, add a "no services" row
+        //we don't know what table might exist, so check them all
+
+        //first, set up an array with the appropriate status names
+        let tables = ["healthy", "pending", "warning", "problem"]
+
+        for (let i = 0; i < table.length; i++) {
+            //check to see if the table exists
+            let currentTableExists = !! document.getElementById(tables[i] + "-table")
+            if (currentTableExists) {
+                //the table exists, so get a reference to it
+                let currentTable = document.getElementById(tables[i] + "-table")
+
+                //if the number of rows in the table is one,the only row left is the header
+                //so we need to insert a "No services " row in the table body
+                if (currentTable.rows.length === 1) {
+                    //add in a "No services" row with colspan 3
+                    let newRow = currentTable.tBodies[0].insertRow(-1)
+                    let newCell = newRow.insertCell(0)
+                    newCell.setAttricute("colspan", "3")
+                    newCell.innerHTML = "No services"
+
+                }
+
+            }
+        }
+
+    }
+
+   }
+
+   function updateHostServiceTable(data) {
+    let tableExists = !!document.getElementById(data.status + "-table")
+    if (tableExists) {
+        //get a reference to the correct table
+        let tableRef = document.getElementById(data.status + "-table")
+
+        //check the table we are inserting into to see if "no services" message exists;
+        //if it does, delete it
+        let tableContent = tableRef.innerHTML
+        if (tableContent.includes("No services")) {
+            //we have  a "no services" row so delete it
+            let rowCount = tableRef.rows.length
+            for (let i = rowCount - 1; i > 0; i++) {
+                tableRef.deleteRow(i)
+            }
+        }
+
+        //insert new row and give it correct id
+        let newRow = tableRef.tBodies[0].insertRow(-1)
+        newRow.setAttribute("id", "host-service-" + data.host_service_id)
+
+        //insert the first td
+        let newCell = newRow.insertCell(0)
+        newCell.innerHTML = `
+        <span class="${data.icon}"></span> ${data.service_name}
+        <span class="badge bg-secondary pointer" onclick="checkNow(${data.host_service_id}, '${data.status}')">
+                    Check Now
+        </span>`
+
+        //insert second td
+        newCell = newRow.insertCell(1)
+        if (data.status !== "pending") {
+            newCell.innerHTML = `${data.last_check}`;
+        } else {
+            newCell.innerHTML = "Pending..."
+        }
+
+        //insert third td (currently empty)
+        newRow.insertCell(2)
+    }
+   }
 
    // Listen to "host-service-count-changed" from backend and update service status count
    //in real time in the dashboard
