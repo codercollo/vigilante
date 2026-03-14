@@ -25,6 +25,11 @@
      warningAlert(data.message)
    })
 
+   // Listen to "host-service-status-changed" from backend and show msg
+   publicChannel.bind("host-service-status-changed", function(data) {
+    successAlert(data.message)
+   })
+
    //things we want to look for:
    // - service goes down
    // - service comes up

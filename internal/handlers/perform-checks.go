@@ -49,6 +49,13 @@ func (repo *DBRepo) ScheduledCheck(hostServiceID int) {
 
 	newStatus, msg := repo.testServiceForHost(h, hs)
 
+	if newStatus != hs.Status {
+		data := make(map[string]string)
+		data["message"] = fmt.Sprintf("host services %s on %s has changed to %s", hs.Service.ServiceName, h.HostName, newStatus)
+		repo.broadcastMessage("public-channel", "host-service-status-changed", data)
+
+	}
+
 	hs.Status = newStatus
 	hs.LastCheck = time.Now()
 	err = repo.DB.UpdateHostService(hs)
@@ -59,6 +66,13 @@ func (repo *DBRepo) ScheduledCheck(hostServiceID int) {
 
 	log.Println("New status is", newStatus, "and msg is ", msg)
 
+}
+
+func (repop *DBRepo) broadcastMessage(channel, messageType string, data map[string]string) {
+	err := app.WsClient.Trigger(channel, messageType, data)
+	if err != nil {
+		log.Println(err)
+	}
 }
 
 // TestCheck does manual service checks via HTTP endpoint
